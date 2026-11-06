@@ -1,6 +1,7 @@
 """Calculate Soft Filter scores and intermediate measures for candidate spaces."""
 
 from collections.abc import Mapping, Sequence
+from decimal import Decimal
 from math import dist, fsum, isfinite, sqrt
 
 
@@ -86,12 +87,15 @@ def area_fit_penalties(
     if any(area is None or not isfinite(area) or area < 0 for area in areas_pyeong):
         raise ValueError("Candidate areas must be finite, non-negative numbers.")
 
+    minimum = Decimal(str(min_pyeong))
+    maximum = Decimal(str(max_pyeong))
     penalties = []
     for area in areas_pyeong:
-        if area < min_pyeong:
-            penalties.append(3 * (min_pyeong - area))
-        elif area > max_pyeong:
-            penalties.append(area - max_pyeong)
+        decimal_area = Decimal(str(area))
+        if decimal_area < minimum:
+            penalties.append(float(3 * (minimum - decimal_area)))
+        elif decimal_area > maximum:
+            penalties.append(float(decimal_area - maximum))
         else:
             penalties.append(0.0)
     return penalties
