@@ -204,7 +204,7 @@ function AllSpacesModal({ spaces, onClose, onSelect, comparedIds, onCompare }) {
   );
 }
 
-export default function RecommendationResults({ filters, softFilters, onEditConditions, onEditCriteria }) {
+export default function RecommendationResults({ filters, softFilters, onEditConditions, onEditCriteria, initialResult = null, onOpenWhatIf }) {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -217,12 +217,12 @@ export default function RecommendationResults({ filters, softFilters, onEditCond
   useEffect(() => {
     let alive = true;
     setLoading(true); setError('');
-    createRecommendation(request)
+    (initialResult ? Promise.resolve(initialResult) : createRecommendation(request))
       .then((data) => { if (alive) { setResult(data); setSelectedSpaceId(data.recommendations?.[0]?.space_id ?? null); setCompareIds([]); } })
       .catch((e) => { if (alive) { setError(e.message || '추천 결과를 불러오지 못했어요.'); setResult(null); } })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [request]);
+  }, [request, initialResult]);
 
   const spaces = result?.recommendations || [];
   const selectedSpace = spaces.find((space) => space.space_id === selectedSpaceId) || spaces[0];
@@ -250,7 +250,7 @@ export default function RecommendationResults({ filters, softFilters, onEditCond
     <div className="result-page">
       <div className="result-topline">
         <div><span className="result-kicker">STEP 3 · 맞춤형 공간 추천</span><h1>브랜드에 어울리는 팝업 공간들을 소개합니다.</h1><p>공간 정보를 비교하고, 가장 적합한 후보를 선택해 보세요.</p></div>
-        <div className="result-top-actions"><button type="button" onClick={onEditConditions}>기본 조건 수정</button><button type="button" onClick={onEditCriteria}><SmallIcon type="refresh" size={15}/> 추천 기준 수정</button></div>
+        <div className="result-top-actions"><button type="button" className="result-whatif-start" onClick={() => onOpenWhatIf(result)}>조건 변경 (What-if) ↗</button><button type="button" onClick={onEditConditions}>기본 조건 수정</button><button type="button" onClick={onEditCriteria}><SmallIcon type="refresh" size={15}/> 추천 기준 수정</button></div>
       </div>
       <div className="result-demo-alert" role="note"><strong>MOCK DEMO</strong><span>공간 기본 정보는 최종 CSV 기반이며, 추천 순위·점수·근거는 개발용 예시입니다. <b>운영 기간별 대관 가능 여부는 확인되지 않았습니다.</b></span></div>
       <div className="result-summary-strip">
@@ -272,7 +272,7 @@ export default function RecommendationResults({ filters, softFilters, onEditCond
           <div className="result-empty-icon"><SmallIcon type="pin" size={28}/></div>
           <h2>현재 조건에 맞는 공간이 없어요.</h2>
           <p>Mock 데이터에서 선택한 지역과 최대 예산을 동시에 만족하는 공간이 없습니다. 예산을 높이거나 다른 지역을 추가해 보세요. 운영 기간의 실제 예약 가능 여부는 판단하지 않았습니다.</p>
-          <button type="button" className="primary-button" onClick={onEditConditions}>기본 조건 다시 설정하기</button>
+          <div className="result-empty-actions"><button type="button" className="primary-button" onClick={onEditConditions}>기본 조건 다시 설정하기</button><button type="button" className="result-whatif-start" onClick={() => onOpenWhatIf(result)}>What-if로 조건 완화하기</button></div>
           <details className="result-request-json"><summary>전송 요청 JSON 확인</summary><pre>{JSON.stringify(request, null, 2)}</pre></details>
         </section>
       ) : (
@@ -291,6 +291,7 @@ export default function RecommendationResults({ filters, softFilters, onEditCond
             </section>
             <SpaceDetail space={selectedSpace} weights={result.weights} selected={selectedFactors} onCompare={() => toggleCompare(selectedSpace.space_id)} compared={compareIds.includes(selectedSpace.space_id)} compareDisabled={compareIds.length >= 2}/>
           </div>
+          <section className="result-whatif-cta"><div><strong>AI 의사결정 도우미 · What-if 분석</strong><p>예산·지역·면적·추천 기준을 변경하면 후보가 어떻게 달라지는지 비교할 수 있어요.</p></div><button type="button" onClick={() => onOpenWhatIf(result)}>조건 변경 분석하기 →</button></section>
           <section className="result-compare-bar" aria-label="Trade-off 비교 후보 선택">
             <div className="result-compare-title"><SmallIcon type="compare" size={20}/><div><strong>Trade-off 비교 후보 선택</strong><small>서로 비교하고 싶은 공간을 2개 선택해 주세요.</small></div></div>
             <div className="result-compare-chips">{[0, 1].map((index) => selectedComparisons[index] ? <button type="button" key={index} onClick={() => toggleCompare(selectedComparisons[index].space_id)} title="비교 후보 해제">{index + 1}. {selectedComparisons[index].name} ×</button> : <span key={index}>{index + 1}번째 후보 선택</span>)}</div>

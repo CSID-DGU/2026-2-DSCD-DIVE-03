@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 import './App.css';
+import RecommendationResults from './components/RecommendationResults';
+import WhatIfAnalysis from './components/WhatIfAnalysis';
 
 // 최종 CSV 확인(2026-11-06): 공간 983개 / 팝업 6,383개.
 // region_ids와 category_id에는 임시 영문 ID 대신 CSV의 실제 한글 분류값을 저장합니다.
@@ -340,7 +342,7 @@ function ConditionsPage({ filters, setFilters, onNext }) {
 
           <div className="field">
             <label>타깃 고객 <span className="optional">(선택)</span></label>
-            <OptionPicker label="타깃 고객" options={TARGETS} value={filters.target_customers} onChange={(value) => setField('target_customers', value)} placeholder="성별·연령대를 선택해주세요 (0~9세 포함)" multiple />
+            <OptionPicker label="타깃 고객" options={TARGETS} value={filters.target_customers} onChange={(value) => setField('target_customers', value)} placeholder="성별·연령대를 선택해주세요" multiple />
           </div>
 
           <div className="field">
@@ -633,50 +635,30 @@ function SoftFilterPage({ filters, softFilters, setSoftFilters, onBack, onNext }
   );
 }
 
-// Step 03은 아직 추천 엔진이 연결되지 않았습니다. '추천 결과'를 만들어 내지 않고
-// 실제 POST /recommendations에 전달할 Request JSON만 검토하는 개발용 화면입니다.
-function RequestPreview({ filters, softFilters, onBack }) {
-  const request = { hard_filters: filters, soft_filters: softFilters };
-  return (
-    <section className="preview-card" aria-labelledby="request-title">
-      <span className="section-tag">STEP 3 · API 연동 준비용 미리보기</span>
-      <h2 id="request-title">추천 조건 설정이 완료됐어요!</h2>
-      <p>현재 백엔드 추천 API는 아직 연결되지 않았어요. 아래는 추후 <code>POST /recommendations</code>에 전송할 요청 데이터이며, 실제 공간 추천 결과가 아닙니다.</p>
-      <h3>선택한 Soft Filter 중요도 순서</h3>
-      <div className="request-criteria-list">
-        {softFilters.selected.map((id, index) => (
-          <div className="request-criteria" key={id}>
-            <span className="request-rank">{index + 1}</span>
-            <strong>{SOFT_FILTER_META.find((criterion) => criterion.id === id)?.label}</strong>
-            {index < softFilters.selected.length - 1 && <small>다음 기준보다 {GAP_CHOICES.find((item) => item.value === softFilters.importance_gaps[index])?.text}</small>}
-          </div>
-        ))}
-      </div>
-      <details className="debug-details" open>
-        <summary>API 요청 JSON (Mock — 실제 서버 전송 없음)</summary>
-        <pre>{JSON.stringify(request, null, 2)}</pre>
-      </details>
-      <button type="button" className="secondary-button" onClick={onBack}>← 추천 기준 수정하기</button>
-    </section>
-  );
-}
-
 function App() {
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [softFilters, setSoftFilters] = useState(null);
   const [previousEligibility, setPreviousEligibility] = useState({});
   const [currentStep, setCurrentStep] = useState(1);
 
+  // STEP 03의 추천 결과를 보관합니다. STEP 04에서 뒤로 가더라도 기존 결과가 유지됩니다.
+  const [recommendationSnapshot, setRecommendationSnapshot] = useState(null);
+  const [whatIfBaseline, setWhatIfBaseline] = useState(null);
+
   const goToStep = (step) => {
     setCurrentStep(step);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
   const goToCriteria = () => {
-    const eligibility = Object.fromEntries(SOFT_FILTER_META.map((item) => [item.id, isAvailable(item, filters)]));
+    // 새로운 입력으로 추천을 다시 실행할 때, 이전 Mock 결과를 재사용하지 않습니다.
+    setRecommendationSnapshot(null);
+    setWhatIfBaseline(null);
+    const eligibility = Object.fromEntries(
+      SOFT_FILTER_META.map((item) => [item.id, isAvailable(item, filters)]),
+    );
     setSoftFilters((previous) => {
       if (!previous) return initialSoftFilters(filters);
-      // 선행 정보를 제거하면 해당 요소는 해제하고, 네 가지 자동 선택 조건을 새로 충족할 때만 자동 선택합니다.
-      // 사용자가 수동으로 해제한 요소는 선행 조건이 바뀌지 않는 한 그대로 유지합니다.
       const retained = previous.selected.filter((id) => eligibility[id]);
       const newlyEnabled = SOFT_FILTER_META.filter((item) =>
         item.autoSelect && eligibility[item.id] && !previousEligibility[item.id] && !retained.includes(item.id),
@@ -686,6 +668,49 @@ function App() {
     });
     setPreviousEligibility(eligibility);
     goToStep(2);
+  };
+
+  const editConditions = () => {
+    setRecommendationSnapshot(null);
+    setWhatIfBaseline(null);
+    goToStep(1);
+  };
+  const editCriteria = () => {
+    setRecommendationSnapshot(null);
+    setWhatIfBaseline(null);
+    goToStep(2);
+  };
+
+  // 추천 결과 페이지 위/아래 두 What-if 버튼이 모두 동일한 함수를 호출합니다.
+  const openWhatIf = (result) => {
+    if (!result?.recommendation_id) return;
+    const baseline = {
+      ...result,
+      hard_filters: result.hard_filters || filters,
+      soft_filters: result.soft_filters || softFilters,
+    };
+    setRecommendationSnapshot(baseline);
+    setWhatIfBaseline(baseline);
+    goToStep(4);
+  };
+
+  const backFromWhatIf = () => {
+    // 변경 전 추천 결과 그대로 돌아갑니다. 분석을 다시 실행하지 않습니다.
+    if (whatIfBaseline) setRecommendationSnapshot(whatIfBaseline);
+    goToStep(3);
+  };
+
+  const applyWhatIf = (updatedResult) => {
+    if (!updatedResult?.recommendation_id || !updatedResult?.hard_filters || !updatedResult?.soft_filters) return;
+    // 새 추천 결과뿐 아니라 입력 조건과 중요도 설정도 함께 동기화합니다.
+    setFilters(updatedResult.hard_filters);
+    setSoftFilters(updatedResult.soft_filters);
+    setPreviousEligibility(Object.fromEntries(SOFT_FILTER_META.map((item) => [
+      item.id, isAvailable(item, updatedResult.hard_filters),
+    ])));
+    setRecommendationSnapshot(updatedResult);
+    setWhatIfBaseline(null);
+    goToStep(3);
   };
 
   return (
@@ -698,8 +723,8 @@ function App() {
         </div>
       </header>
 
-      <main className="page-content">
-        {currentStep === 1 ? (
+      <main className={`page-content ${currentStep === 3 ? 'page-content-results' : currentStep === 4 ? 'page-content-whatif' : ''}`}>
+        {currentStep < 3 && (currentStep === 1 ? (
           <div className="hero-heading">
             <span className="hero-eyebrow">데이터 기반 팝업스토어 공간 추천 및 출점 의사결정 지원 시스템</span>
             <h1>좋은 팝업은,<br />좋은 공간에서 시작됩니다.</h1>
@@ -708,14 +733,40 @@ function App() {
         ) : (
           <div className="hero-heading step-hero">
             <span className="hero-eyebrow">데이터 기반 팝업스토어 공간 추천 및 출점 의사결정 지원 시스템</span>
-            <h1>{currentStep === 2 ? '어떤 기준을 중요하게 볼까요?' : '추천 조건 입력을 마쳤어요!'}</h1>
-            <p>{currentStep === 2 ? '공간 추천 시 고려할 평가 기준을 선택하고, 각 기준의 중요도를 설정할 수 있어요.' : '백엔드 연동 전 요청 데이터가 올바르게 생성됐는지 확인할 수 있어요.'}</p>
+            <h1>어떤 기준을 중요하게 볼까요?</h1>
+            <p>공간 추천 시 고려할 평가 기준을 선택하고, 각 기준의 중요도를 설정할 수 있어요.</p>
           </div>
+        ))}
+        {currentStep < 3 && <StepIndicator currentStep={currentStep} />}
+        {currentStep === 1 && (
+          <ConditionsPage filters={filters} setFilters={setFilters} onNext={goToCriteria} />
         )}
-        <StepIndicator currentStep={currentStep} />
-        {currentStep === 1 && <ConditionsPage filters={filters} setFilters={setFilters} onNext={goToCriteria} />}
-        {currentStep === 2 && softFilters && <SoftFilterPage filters={filters} softFilters={softFilters} setSoftFilters={setSoftFilters} onBack={() => goToStep(1)} onNext={() => goToStep(3)} />}
-        {currentStep === 3 && softFilters && <RequestPreview filters={filters} softFilters={softFilters} onBack={() => goToStep(2)} />}
+        {currentStep === 2 && softFilters && (
+          <SoftFilterPage
+            filters={filters}
+            softFilters={softFilters}
+            setSoftFilters={setSoftFilters}
+            onBack={() => goToStep(1)}
+            onNext={() => { setRecommendationSnapshot(null); setWhatIfBaseline(null); goToStep(3); }}
+          />
+        )}
+        {currentStep === 3 && softFilters && (
+          <RecommendationResults
+            filters={filters}
+            softFilters={softFilters}
+            initialResult={recommendationSnapshot}
+            onEditConditions={editConditions}
+            onEditCriteria={editCriteria}
+            onOpenWhatIf={openWhatIf}
+          />
+        )}
+        {currentStep === 4 && whatIfBaseline && (
+          <WhatIfAnalysis
+            baseline={whatIfBaseline}
+            onBack={backFromWhatIf}
+            onApply={applyWhatIf}
+          />
+        )}
       </main>
     </div>
   );
