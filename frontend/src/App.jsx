@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import './App.css';
 import RecommendationResults from './components/RecommendationResults';
 import WhatIfAnalysis from './components/WhatIfAnalysis';
+import TradeOffAnalysis from './components/TradeOffAnalysis';
 
 // 최종 CSV 확인(2026-11-06): 공간 983개 / 팝업 6,383개.
 // region_ids와 category_id에는 임시 영문 ID 대신 CSV의 실제 한글 분류값을 저장합니다.
@@ -644,6 +645,8 @@ function App() {
   // STEP 03의 추천 결과를 보관합니다. STEP 04에서 뒤로 가더라도 기존 결과가 유지됩니다.
   const [recommendationSnapshot, setRecommendationSnapshot] = useState(null);
   const [whatIfBaseline, setWhatIfBaseline] = useState(null);
+  const [tradeOffBaseline, setTradeOffBaseline] = useState(null);
+  const [tradeOffSelection, setTradeOffSelection] = useState([]);
 
   const goToStep = (step) => {
     setCurrentStep(step);
@@ -654,6 +657,8 @@ function App() {
     // 새로운 입력으로 추천을 다시 실행할 때, 이전 Mock 결과를 재사용하지 않습니다.
     setRecommendationSnapshot(null);
     setWhatIfBaseline(null);
+    setTradeOffBaseline(null);
+    setTradeOffSelection([]);
     const eligibility = Object.fromEntries(
       SOFT_FILTER_META.map((item) => [item.id, isAvailable(item, filters)]),
     );
@@ -673,11 +678,15 @@ function App() {
   const editConditions = () => {
     setRecommendationSnapshot(null);
     setWhatIfBaseline(null);
+    setTradeOffBaseline(null);
+    setTradeOffSelection([]);
     goToStep(1);
   };
   const editCriteria = () => {
     setRecommendationSnapshot(null);
     setWhatIfBaseline(null);
+    setTradeOffBaseline(null);
+    setTradeOffSelection([]);
     goToStep(2);
   };
 
@@ -710,6 +719,25 @@ function App() {
     ])));
     setRecommendationSnapshot(updatedResult);
     setWhatIfBaseline(null);
+    setTradeOffBaseline(null);
+    setTradeOffSelection([]);
+    goToStep(3);
+  };
+
+  const openTradeOff = (result, spaceIds) => {
+    const ids = Array.isArray(spaceIds) ? spaceIds : [];
+    if (!result?.recommendation_id || ids.length !== 2 || ids[0] === ids[1]) return;
+    const available = new Set((result.recommendations || []).map((space) => space.space_id));
+    if (ids.some((id) => !available.has(id))) return;
+    setRecommendationSnapshot(result);
+    setTradeOffBaseline(result);
+    setTradeOffSelection([...ids]);
+    goToStep(5);
+  };
+
+  const backFromTradeOff = () => {
+    if (tradeOffBaseline) setRecommendationSnapshot(tradeOffBaseline);
+    setTradeOffBaseline(null);
     goToStep(3);
   };
 
@@ -723,7 +751,7 @@ function App() {
         </div>
       </header>
 
-      <main className={`page-content ${currentStep === 3 ? 'page-content-results' : currentStep === 4 ? 'page-content-whatif' : ''}`}>
+      <main className={`page-content ${currentStep === 3 ? 'page-content-results' : currentStep === 4 ? 'page-content-whatif' : currentStep === 5 ? 'page-content-tradeoff' : ''}`}>
         {currentStep < 3 && (currentStep === 1 ? (
           <div className="hero-heading">
             <span className="hero-eyebrow">데이터 기반 팝업스토어 공간 추천 및 출점 의사결정 지원 시스템</span>
@@ -747,7 +775,7 @@ function App() {
             softFilters={softFilters}
             setSoftFilters={setSoftFilters}
             onBack={() => goToStep(1)}
-            onNext={() => { setRecommendationSnapshot(null); setWhatIfBaseline(null); goToStep(3); }}
+            onNext={() => { setRecommendationSnapshot(null); setWhatIfBaseline(null); setTradeOffBaseline(null); setTradeOffSelection([]); goToStep(3); }}
           />
         )}
         {currentStep === 3 && softFilters && (
@@ -758,6 +786,9 @@ function App() {
             onEditConditions={editConditions}
             onEditCriteria={editCriteria}
             onOpenWhatIf={openWhatIf}
+            onOpenTradeOff={openTradeOff}
+            initialCompareIds={tradeOffSelection}
+            onCompareIdsChange={setTradeOffSelection}
           />
         )}
         {currentStep === 4 && whatIfBaseline && (
@@ -765,6 +796,13 @@ function App() {
             baseline={whatIfBaseline}
             onBack={backFromWhatIf}
             onApply={applyWhatIf}
+          />
+        )}
+        {currentStep === 5 && tradeOffBaseline && tradeOffSelection.length === 2 && (
+          <TradeOffAnalysis
+            baseline={tradeOffBaseline}
+            spaceIds={tradeOffSelection}
+            onBack={backFromTradeOff}
           />
         )}
       </main>

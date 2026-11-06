@@ -204,12 +204,12 @@ function AllSpacesModal({ spaces, onClose, onSelect, comparedIds, onCompare }) {
   );
 }
 
-export default function RecommendationResults({ filters, softFilters, onEditConditions, onEditCriteria, initialResult = null, onOpenWhatIf }) {
+export default function RecommendationResults({ filters, softFilters, onEditConditions, onEditCriteria, initialResult = null, onOpenWhatIf, onOpenTradeOff, initialCompareIds = [], onCompareIdsChange }) {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedSpaceId, setSelectedSpaceId] = useState(null);
-  const [compareIds, setCompareIds] = useState([]);
+  const [compareIds, setCompareIds] = useState(() => initialCompareIds);
   const [modalOpen, setModalOpen] = useState(false);
   const [compareNotice, setCompareNotice] = useState('');
   const request = useMemo(() => ({ hard_filters: filters, soft_filters: softFilters }), [filters, softFilters]);
@@ -218,27 +218,38 @@ export default function RecommendationResults({ filters, softFilters, onEditCond
     let alive = true;
     setLoading(true); setError('');
     (initialResult ? Promise.resolve(initialResult) : createRecommendation(request))
-      .then((data) => { if (alive) { setResult(data); setSelectedSpaceId(data.recommendations?.[0]?.space_id ?? null); setCompareIds([]); } })
+      .then((data) => { if (alive) { setResult(data); setSelectedSpaceId(data.recommendations?.[0]?.space_id ?? null); setCompareIds((initialCompareIds || []).filter((id) => data.recommendations?.some((s) => s.space_id === id))); } })
       .catch((e) => { if (alive) { setError(e.message || '추천 결과를 불러오지 못했어요.'); setResult(null); } })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
+  // initialCompareIds는 마운트 시 복귀값으로만 사용 (선택 때마다 추천 결과 재조회 방지).
   }, [request, initialResult]);
 
   const spaces = result?.recommendations || [];
   const selectedSpace = spaces.find((space) => space.space_id === selectedSpaceId) || spaces[0];
   const selectedFactors = result?.soft_filters?.selected || softFilters.selected || [];
   const toggleCompare = (id) => {
-    if (compareIds.includes(id)) {
-      setCompareIds((previous) => previous.filter((x) => x !== id));
-      setCompareNotice('');
-      return;
-    }
-    if (compareIds.length >= 2) {
+    const next = compareIds.includes(id)
+      ? compareIds.filter((x) => x !== id)
+      : compareIds.length >= 2 ? compareIds : [...compareIds, id];
+    if (next === compareIds) {
       setCompareNotice('공간은 정확히 2개까지만 선택할 수 있어요.');
       return;
     }
-    setCompareIds((previous) => [...previous, id]);
+    setCompareIds(next);
+    onCompareIdsChange?.(next);
     setCompareNotice('');
+  };
+  const beginTradeOff = () => {
+    if (compareIds.length !== 2) {
+      setCompareNotice('서로 다른 공간 2개를 선택해 주세요.');
+      return;
+    }
+    if (typeof onOpenTradeOff !== 'function') {
+      setCompareNotice('Trade-off 분석 화면 연결이 누락됐어요. App.jsx를 확인해 주세요.');
+      return;
+    }
+    onOpenTradeOff(result, compareIds);
   };
   const selectedComparisons = compareIds.map((id) => spaces.find((s) => s.space_id === id)).filter(Boolean);
 
@@ -295,7 +306,7 @@ export default function RecommendationResults({ filters, softFilters, onEditCond
           <section className="result-compare-bar" aria-label="Trade-off 비교 후보 선택">
             <div className="result-compare-title"><SmallIcon type="compare" size={20}/><div><strong>Trade-off 비교 후보 선택</strong><small>서로 비교하고 싶은 공간을 2개 선택해 주세요.</small></div></div>
             <div className="result-compare-chips">{[0, 1].map((index) => selectedComparisons[index] ? <button type="button" key={index} onClick={() => toggleCompare(selectedComparisons[index].space_id)} title="비교 후보 해제">{index + 1}. {selectedComparisons[index].name} ×</button> : <span key={index}>{index + 1}번째 후보 선택</span>)}</div>
-            <button type="button" className="result-compare-start" disabled={compareIds.length !== 2} onClick={() => setCompareNotice('비교 후보 2개 선택 완료! Trade-off 상세 분석 화면은 후속 개발 단계에서 구현할 예정입니다.')}>2개 후보 확인 <SmallIcon type="arrow" size={15}/></button>
+            <button type="button" className="result-compare-start" disabled={compareIds.length !== 2} onClick={beginTradeOff}>2개 공간 비교하기 <SmallIcon type="arrow" size={15}/></button>
           </section>
           {compareNotice && <p className="result-compare-notice" role="status">{compareNotice}</p>}
           <details className="result-request-json"><summary>개발용 API 요청·응답 JSON 확인</summary><p>실제 POST /recommendations 응답으로 교체할 수 있도록 동일한 핵심 필드를 사용합니다.</p><pre>{JSON.stringify({ request, response: { ...result, recommendations: result.recommendations.slice(0, 2) } }, null, 2)}</pre></details>
