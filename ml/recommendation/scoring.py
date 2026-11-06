@@ -1,19 +1,28 @@
-"""Score subway access and rental fit within a set of candidate spaces."""
+"""Calculate Soft Filter scores and intermediate measures for candidate spaces."""
 
-from collections.abc import Sequence
-from math import isfinite
+from collections.abc import Mapping, Sequence
+from math import dist, fsum, isfinite
 
 
-def _reverse_min_max(values: Sequence[float]) -> list[float]:
+_TRAIT_KEYS = (
+    "spirited", "trustworthy", "upscale", "stylish",
+    "well-organized", "friendly", "sentimental",
+)
+
+
+def _min_max(values: Sequence[float], *, reverse: bool = False) -> list[float]:
     if not values:
         return []
 
     minimum = min(values)
     maximum = max(values)
     if minimum == maximum:
-        raise ValueError("Reverse Min-Max requires at least two distinct values.")
+        raise ValueError("Min-Max requires at least two distinct values.")
 
-    return [(maximum - value) / (maximum - minimum) for value in values]
+    span = maximum - minimum
+    if reverse:
+        return [(maximum - value) / span for value in values]
+    return [(value - minimum) / span for value in values]
 
 
 def subway_accessibility_scores(distances_m: Sequence[float]) -> list[float]:
@@ -21,7 +30,7 @@ def subway_accessibility_scores(distances_m: Sequence[float]) -> list[float]:
     if any(distance is None or not isfinite(distance) or distance < 0 for distance in distances_m):
         raise ValueError("Station distances must be finite, non-negative numbers.")
 
-    return _reverse_min_max(distances_m)
+    return _min_max(distances_m, reverse=True)
 
 
 def rental_price_fit_scores(
@@ -34,4 +43,70 @@ def rental_price_fit_scores(
         raise ValueError("Rental prices must be finite, non-negative numbers.")
 
     budget_ratios = [price / max_budget_krw for price in prices_krw]
-    return _reverse_min_max(budget_ratios)
+    return _min_max(budget_ratios, reverse=True)
+
+
+def target_ratio_scores(
+    ratios_by_candidate: Sequence[Mapping[str, float]], selected_groups: Sequence[str]
+) -> list[float]:
+    """Sum selected demographic fractions and normalize across the candidates."""
+    if not selected_groups or len(set(selected_groups)) != len(selected_groups):
+        raise ValueError("Select at least one demographic group without duplicates.")
+
+    totals = []
+    for ratios in ratios_by_candidate:
+        selected_ratios = []
+        for group in selected_groups:
+            ratio = ratios.get(group)
+            if ratio is None or not 0 <= ratio <= 1:
+                raise ValueError(f"Demographic group {group!r} requires a fraction in [0, 1].")
+            selected_ratios.append(ratio)
+        totals.append(fsum(selected_ratios))
+
+    return _min_max(totals)
+
+
+def popup_history_scores(counts: Sequence[int]) -> list[float]:
+    """Normalize past same-category, same-district counts in candidate order."""
+    if any(type(count) is not int or count < 0 for count in counts):
+        raise ValueError("Popup history counts must be non-negative integers.")
+
+    return _min_max(counts)
+
+
+def area_fit_penalties(
+    areas_pyeong: Sequence[float], min_pyeong: float, max_pyeong: float
+) -> list[float]:
+    """Calculate raw area penalties with a shortage multiplier of 3."""
+    if not isfinite(max_pyeong) or not 0 <= min_pyeong <= max_pyeong:
+        raise ValueError("The desired area range must be finite and ordered.")
+    if any(area is None or not isfinite(area) or area < 0 for area in areas_pyeong):
+        raise ValueError("Candidate areas must be finite, non-negative numbers.")
+
+    penalties = []
+    for area in areas_pyeong:
+        if area < min_pyeong:
+            penalties.append(3 * (min_pyeong - area))
+        elif area > max_pyeong:
+            penalties.append(area - max_pyeong)
+        else:
+            penalties.append(0.0)
+    return penalties
+
+
+def _trait_vector(profile: Mapping[str, float]) -> list[float]:
+    vector = []
+    for key in _TRAIT_KEYS:
+        value = profile.get(key)
+        if value is None or not 0 <= value <= 1:
+            raise ValueError(f"Trait {key!r} requires a score in [0, 1].")
+        vector.append(value)
+    return vector
+
+
+def brand_space_distances(
+    brand_traits: Mapping[str, float], space_traits: Sequence[Mapping[str, float]]
+) -> list[float]:
+    """Compare the seven shared traits by key and return raw Euclidean distances."""
+    brand_vector = _trait_vector(brand_traits)
+    return [dist(brand_vector, _trait_vector(profile)) for profile in space_traits]
