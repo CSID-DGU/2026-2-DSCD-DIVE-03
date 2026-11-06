@@ -97,6 +97,17 @@ def area_fit_penalties(
     return penalties
 
 
+def area_fit_scores(
+    areas_pyeong: Sequence[float], min_pyeong: float, max_pyeong: float
+) -> list[float]:
+    """Normalize area penalties across candidates that passed the Hard Filter.
+
+    Identical penalties receive 1.0 if zero, otherwise 0.5.
+    """
+    penalties = area_fit_penalties(areas_pyeong, min_pyeong, max_pyeong)
+    return _min_max(penalties, reverse=True, zero_tie_score=1.0)
+
+
 def _trait_vector(profile: Mapping[str, float]) -> list[float]:
     vector = []
     for key in _TRAIT_KEYS:
