@@ -34,11 +34,15 @@ def rank_candidates(
             factor_scores[factor] = score
             contributions[factor] = 100 * weight * score
 
+        final_score = fsum(contributions.values())
+        if final_score > 100 and isclose(final_score, 100, rel_tol=0, abs_tol=1e-12):
+            final_score = 100.0
+
         results.append(
             {
                 "space_id": space_id,
                 "rank": 0,
-                "final_score": fsum(contributions.values()),
+                "final_score": final_score,
                 "factor_scores": factor_scores,
                 "contributions": contributions,
             }
