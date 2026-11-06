@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import './App.css';
 
 // 최종 CSV 확인(2026-11-06): 공간 983개 / 팝업 6,383개.
@@ -125,6 +125,42 @@ function Icon({ name, size = 16 }) {
   return null;
 }
 
+// 두 날짜 모두 전체 입력창과 달력 버튼으로 날짜 선택기를 열 수 있습니다.
+// Chrome/Edge 등에서 showPicker를 지원하며, 미지원 브라우저는 입력창 포커스로 대체합니다.
+function DateField({ id, label, value, min, onChange }) {
+  const inputRef = useRef(null);
+  const openPicker = () => {
+    const input = inputRef.current;
+    if (!input) return;
+    try {
+      if (typeof input.showPicker === 'function') {
+        input.showPicker();
+        return;
+      }
+    } catch {
+      // 브라우저 보안 제한 등으로 showPicker가 실패하면 직접 입력할 수 있도록 포커스합니다.
+    }
+    input.focus();
+  };
+  return (
+    <div className="date-field">
+      <input
+        ref={inputRef}
+        id={id}
+        aria-label={label}
+        type="date"
+        min={min}
+        value={value}
+        onClick={openPicker}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <button type="button" className="date-open-button" aria-label={`${label} 달력 열기`} onClick={openPicker}>
+        <Icon name="calendar" size={15} />
+      </button>
+    </div>
+  );
+}
+
 function OptionPicker({ options, value, onChange, placeholder, multiple = false, max, label, countUnit }) {
   const selected = multiple ? value : value ? [value] : [];
 
@@ -234,7 +270,13 @@ function ConditionsPage({ filters, setFilters, onNext }) {
   const [errors, setErrors] = useState({});
   const [budgetMode, setBudgetMode] = useState(BUDGETS.includes(filters.max_budget_krw) ? 'preset' : 'custom');
   const setField = (field, value) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
+    setFilters((prev) => {
+      const updated = { ...prev, [field]: value };
+      if (field === 'start_date' && prev.end_date && value && value > prev.end_date) {
+        updated.end_date = ''; // 시작일이 종료일보다 늦어지면 종료일을 다시 선택하도록 합니다.
+      }
+      return updated;
+    });
     setErrors((prev) => ({ ...prev, [field]: undefined, ...(field === 'start_date' || field === 'end_date' ? { period: undefined } : {}) }));
   };
 
@@ -274,7 +316,11 @@ function ConditionsPage({ filters, setFilters, onNext }) {
 
           <div className="field">
             <label htmlFor="start-date">운영 기간 <span>(필수)</span></label>
-            <div className="date-pair"><Icon name="calendar" size={16} /><input id="start-date" aria-label="운영 시작일" type="date" min={getLocalToday()} value={filters.start_date} onChange={(event) => setField('start_date', event.target.value)} /><span className="date-separator">~</span><input aria-label="운영 종료일" type="date" min={filters.start_date || getLocalToday()} value={filters.end_date} onChange={(event) => setField('end_date', event.target.value)} /></div>
+            <div className="date-pair">
+              <DateField id="start-date" label="운영 시작일" min={getLocalToday()} value={filters.start_date} onChange={(value) => setField('start_date', value)} />
+              <span className="date-separator" aria-hidden="true">~</span>
+              <DateField id="end-date" label="운영 종료일" min={filters.start_date || getLocalToday()} value={filters.end_date} onChange={(value) => setField('end_date', value)} />
+            </div>
             {errors.period && <small className="field-error" role="alert">{errors.period}</small>}
           </div>
 
@@ -320,47 +366,326 @@ function ConditionsPage({ filters, setFilters, onNext }) {
   );
 }
 
-// 첫 번째 화면의 입력/검증/다음 단계 이동을 확인하기 위한 임시 화면입니다.
-// 다음 작업에서 실제 Soft Filter 선택·정렬·중요도 UI로 교체합니다.
-function StepTwoPreview({ filters, onBack }) {
-  const factorPrerequisites = [
-    { name: '타깃 고객 비율', ready: filters.target_customers.length > 0, needed: '타깃 고객' },
-    { name: '브랜드–공간 분위기 일치도', ready: Boolean(filters.brand_url), needed: '브랜드 URL' },
-    { name: '동종 팝업 개최 이력', ready: Boolean(filters.category_id), needed: '브랜드 카테고리' },
-    { name: '지하철 접근성', ready: true },
-    { name: '대관료 적합도', ready: true },
-    { name: '공간 면적 적합도', ready: true },
-  ];
+// STEP 02: 11월 4일 확정된 6개 Soft Filter 및 API-01의 필드명 사용
+// 중요도 차이(s)는 0~3, selected는 중요도 내림차순, gaps.length === selected.length - 1
+// 평가요소별 의미를 반영한 벡터 아이콘 (별도 아이콘 라이브러리 필요 없음)
+function CriterionIcon({ name }) {
+  const props = {
+    width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none',
+    stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round',
+    strokeLinejoin: 'round', 'aria-hidden': true,
+  };
+  if (name === 'people') return <svg {...props}><circle cx="9" cy="7" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v2"/></svg>;
+  if (name === 'palette') return <svg {...props}><path d="M12 3a9 9 0 1 0 0 18h1.6a2 2 0 0 0 1.5-3.3 2 2 0 0 1 1.5-3.3H19A3 3 0 0 0 22 11a9 9 0 0 0-10-8Z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/><circle cx="18.5" cy="11" r="1"/></svg>;
+  if (name === 'store') return <svg {...props}><path d="M3 10h18l-2-6H5l-2 6Zm0 0v10h18V10M7 20v-7h5v7M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg>;
+  if (name === 'train') return <svg {...props}><rect x="5" y="3" width="14" height="16" rx="4"/><path d="M8 7h8M7 12h10M8 21l2-2m6 0 2 2"/><circle cx="9" cy="16" r="1"/><circle cx="15" cy="16" r="1"/></svg>;
+  if (name === 'wallet') return <svg {...props}><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 9V5a2 2 0 0 1 2-2h13M17 12h4v5h-4a2.5 2.5 0 0 1 0-5Z"/><circle cx="17.5" cy="14.5" r=".5"/></svg>;
+  if (name === 'ruler') return <svg {...props}><path d="m4 15 11-11 6 6-11 11-6-6Zm8-8 2 2m-5 1 2 2m-5 1 2 2m8-11 2 2"/></svg>;
+  return null;
+}
+
+const SOFT_FILTER_META = [
+  {
+    id: 'target_ratio', label: '타깃 고객 비율', icon: 'people',
+    brief: '원하는 성별·연령대의 방문 비중',
+    detail: '선택한 타깃 성별·연령대 고객이 해당 공간 지역의 방문 인구에서 차지하는 비중이에요.',
+    requires: 'target_customers', requiredLabel: '타깃 고객', autoSelect: true,
+  },
+  {
+    id: 'brand_space_fit', label: '브랜드–공간 분위기 일치도', icon: 'palette',
+    brief: '브랜드 이미지와 공간 분위기의 유사성',
+    detail: '브랜드의 이미지·추구미와 공간의 이미지·디자인·감성적 특성의 유사한 정도를 비교해요.',
+    requires: 'brand_url', requiredLabel: '브랜드 공식 홈페이지 URL', autoSelect: true,
+  },
+  {
+    id: 'popup_history', label: '동종 팝업 개최 이력', icon: 'store',
+    brief: '해당 지역에서 동종 카테고리 팝업이 열린 빈도',
+    detail: '해당 공간 지역에서 과거에 동일 카테고리의 팝업이 얼마나 많이 개최되었는지 평가해요.',
+    requires: 'category_id', requiredLabel: '브랜드 카테고리', autoSelect: true,
+  },
+  {
+    id: 'subway_accessibility', label: '지하철 접근성', icon: 'train',
+    brief: '가장 가까운 지하철역까지의 거리',
+    detail: '공간에서 가장 가까운 지하철역까지의 거리를 비교해요. 거리가 짧을수록 유리해요.',
+  },
+  {
+    id: 'rental_price_fit', label: '대관료 적합도', icon: 'wallet',
+    brief: '설정한 최대 예산 대비 공간의 대관료 수준',
+    detail: '사용자가 설정한 최대 예산에 비해 실제 공간 대관료가 얼마나 부담 없는지 평가해요.',
+  },
+  {
+    id: 'area_fit', label: '공간 면적 적합도', icon: 'ruler', autoSelect: true,
+    brief: '희망 면적 대비 공간 면적 수준',
+    detail: '설정한 희망 면적에 얼마나 잘 맞는지 평가해요. 희망 범위보다 좁으면 더 큰 패널티가 적용돼요.',
+  },
+];
+
+const GAP_CHOICES = [
+  { value: 0, text: '비슷함' },
+  { value: 1, text: '조금 더 중요함' },
+  { value: 2, text: '더 중요함' },
+  { value: 3, text: '훨씬 더 중요함' },
+];
+
+function isAvailable(criterion, filters) {
+  if (criterion.id === 'area_fit') return Number.isFinite(filters.area_min_pyeong)
+    && Number.isFinite(filters.area_max_pyeong)
+    && filters.area_min_pyeong >= 0
+    && filters.area_max_pyeong >= filters.area_min_pyeong;
+  if (criterion.requires === 'target_customers') return filters.target_customers.length > 0;
+  if (criterion.requires === 'brand_url') return Boolean(filters.brand_url);
+  if (criterion.requires === 'category_id') return Boolean(filters.category_id);
+  return true;
+}
+
+function normalizeGaps(gaps, selectedCount) {
+  const needed = Math.max(0, selectedCount - 1);
+  return Array.from({ length: needed }, (_, i) => gaps[i] ?? 1);
+}
+
+// 자동 선택은 사용자 요청에 따라 4가지 입력 연동 평가요소만 적용합니다.
+// 지하철 접근성과 대관료 적합도는 사용자가 직접 체크해야 합니다.
+function initialSoftFilters(filters) {
+  const selected = SOFT_FILTER_META.filter((item) =>
+    item.autoSelect && isAvailable(item, filters),
+  ).map((item) => item.id);
+  return { selected, importance_gaps: normalizeGaps([], selected.length) };
+}
+
+function SoftFilterPage({ filters, softFilters, setSoftFilters, onBack, onNext }) {
+  const [infoId, setInfoId] = useState(null);
+  const [draggingId, setDraggingId] = useState(null);
+  const [overId, setOverId] = useState(null);
+  const [error, setError] = useState('');
+  const selected = softFilters.selected;
+  const unselected = SOFT_FILTER_META.filter((item) => !selected.includes(item.id));
+
+  const updateSelected = (nextSelected) => {
+    setSoftFilters((previous) => ({
+      selected: nextSelected,
+      importance_gaps: normalizeGaps(previous.importance_gaps, nextSelected.length),
+    }));
+    setError('');
+  };
+
+  const toggleCriterion = (id) => {
+    const item = SOFT_FILTER_META.find((criterion) => criterion.id === id);
+    if (!item || !isAvailable(item, filters)) return;
+    const next = selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id];
+    updateSelected(next);
+  };
+
+  const reorder = (sourceId, targetId) => {
+    if (sourceId === targetId) return;
+    const from = selected.indexOf(sourceId);
+    const to = selected.indexOf(targetId);
+    if (from < 0 || to < 0) return;
+    const next = [...selected];
+    next.splice(from, 1);
+    next.splice(to, 0, sourceId);
+    // importance_gaps는 '순위 사이'의 차이이므로 순서 변경 시 위치별 값을 유지해요.
+    updateSelected(next);
+  };
+
+  const moveBy = (id, amount) => {
+    const index = selected.indexOf(id);
+    const target = selected[index + amount];
+    if (target) reorder(id, target);
+  };
+
+  const setGap = (index, value) => {
+    setSoftFilters((previous) => ({
+      ...previous,
+      importance_gaps: previous.importance_gaps.map((gap, i) => (i === index ? value : gap)),
+    }));
+  };
+
+  const handleNext = () => {
+    if (selected.length === 0) {
+      setError('추천에 사용할 평가요소를 최소 1개 선택해 주세요.');
+      return;
+    }
+    onNext();
+  };
+
+  const renderCriterion = (criterion, rankIndex = -1) => {
+    const active = rankIndex >= 0;
+    const available = isAvailable(criterion, filters);
+    const disabled = !available;
+    const isLast = rankIndex === selected.length - 1;
+    return (
+      <div
+        key={criterion.id}
+        className={`criterion-row ${active ? 'is-selected' : 'is-inactive'} ${disabled ? 'is-disabled' : ''} ${overId === criterion.id && draggingId !== criterion.id ? 'is-drop-target' : ''}`}
+        onDragOver={(event) => {
+          if (active && draggingId && draggingId !== criterion.id) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            setOverId(criterion.id);
+          }
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          if (draggingId) reorder(draggingId, criterion.id);
+          setDraggingId(null);
+          setOverId(null);
+        }}
+      >
+        <button
+          type="button" className="criterion-drag" title={active ? '드래그하여 순서 변경' : '선택 후 순서 변경 가능'}
+          aria-label={`${criterion.label} 순서 변경 핸들`}
+          draggable={active}
+          disabled={!active}
+          onDragStart={(event) => {
+            setDraggingId(criterion.id);
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', criterion.id);
+          }}
+          onDragEnd={() => { setDraggingId(null); setOverId(null); }}
+        >⠿</button>
+        <input
+          className="criterion-checkbox" type="checkbox" checked={active} disabled={disabled}
+          aria-label={`${criterion.label} 사용`}
+          onChange={() => toggleCriterion(criterion.id)}
+        />
+        <span className={`criterion-rank ${active ? 'is-visible' : ''}`}>{active ? rankIndex + 1 : '—'}</span>
+        <div className="criterion-content">
+          <div className="criterion-line">
+            <span className="criterion-icon" aria-hidden="true"><CriterionIcon name={criterion.icon} /></span>
+            <strong className="criterion-name">{criterion.label}</strong>
+            <button
+              type="button" className="criterion-info-button"
+              aria-label={`${criterion.label} 평가 기준 설명`}
+              aria-expanded={infoId === criterion.id}
+              onClick={() => setInfoId((previous) => previous === criterion.id ? null : criterion.id)}
+            >ⓘ</button>
+            <span className="criterion-brief">{criterion.brief}</span>
+          </div>
+          {infoId === criterion.id && <p className="criterion-explanation">{criterion.detail}</p>}
+          {disabled && <p className="criterion-requirement">선택하려면 기본 조건에서 {criterion.requiredLabel}을(를) 입력해야 해요.</p>}
+        </div>
+        <div className="criterion-actions">
+          {active && (
+            <div className="criterion-move-buttons" aria-label="순위 조정">
+              <button type="button" title="한 순위 위로" aria-label={`${criterion.label} 한 순위 위로`} disabled={rankIndex === 0} onClick={() => moveBy(criterion.id, -1)}>↑</button>
+              <button type="button" title="한 순위 아래로" aria-label={`${criterion.label} 한 순위 아래로`} disabled={isLast} onClick={() => moveBy(criterion.id, 1)}>↓</button>
+            </div>
+          )}
+          {active && !isLast ? (
+            <select
+              className="criterion-gap-select"
+              aria-label={`${criterion.label}과 다음 순위 사이 중요도 차이`}
+              title="이 기준이 바로 아래 기준보다 얼마나 더 중요한가요?"
+              value={softFilters.importance_gaps[rankIndex] ?? 1}
+              onChange={(event) => setGap(rankIndex, Number(event.target.value))}
+            >
+              {GAP_CHOICES.map(({ value, text }) => <option value={value} key={value}>{text}</option>)}
+            </select>
+          ) : active ? (
+            <span className="criterion-last-label">마지막 기준</span>
+          ) : disabled ? (
+            <button type="button" className="criterion-requirement-button" onClick={onBack}>조건 입력하기</button>
+          ) : (
+            <span className="criterion-not-selected">선택 안 함</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <section className="preview-card">
-      <span className="section-tag">추천 기준 설정 · 개발용 미리보기</span>
-      <h2>기본 조건 입력이 완료됐어요!</h2>
-      <p>첫 화면의 입력 검증과 단계 이동이 정상 동작합니다. 다음 구현 단계에서 6개 Soft Filter의 체크·순위 변경·중요도 차이를 추가할 거예요.</p>
-      <h3>입력한 조건</h3>
-      <div className="review-grid">
-        <div><small>최대 예산</small><strong>{formatBudget(filters.max_budget_krw)}</strong></div>
-        <div><small>운영 기간</small><strong>{filters.start_date} ~ {filters.end_date}</strong></div>
-        <div><small>희망 지역</small><strong>{filters.region_ids.map((id) => getLabel(REGIONS, id)).join(', ')}</strong></div>
-        <div><small>희망 면적</small><strong>{filters.area_min_pyeong}~{filters.area_max_pyeong}평</strong></div>
-        <div><small>타깃 고객</small><strong>{filters.target_customers.length ? filters.target_customers.map((item) => getLabel(TARGETS, item)).join(', ') : '선택 안 함'}</strong></div>
-        <div><small>브랜드 카테고리</small><strong>{filters.category_id || '선택 안 함'}</strong></div>
+    <div className="soft-filter-page">
+      <section className="criteria-panel" aria-labelledby="criteria-title">
+        <div className="card-heading"><span className="section-tag">STEP 3</span><h2 id="criteria-title">추천 기준을 설정해주세요</h2></div>
+        <p className="card-description">최소 1개 이상 선택해 주세요.</p>
+        <div className="criteria-layout">
+          <aside className="priority-rail" aria-label="중요도 순서 안내">
+            <strong>선택한 기준을<br />중요한 순서대로<br />정렬해 주세요</strong>
+            <span className="priority-top">↑</span>
+            <small>중요도 높음<br />(1순위)</small>
+            <div className="priority-line" />
+            <span className="priority-bottom">↓</span>
+            <small>중요도 낮음<br />(마지막 순위)</small>
+          </aside>
+          <div className="criteria-list">
+            {selected.map((id, index) => renderCriterion(SOFT_FILTER_META.find((item) => item.id === id), index))}
+            {unselected.map((item) => renderCriterion(item))}
+          </div>
+        </div>
+        <div className="criteria-helper">
+          <span>ⓘ</span>
+          <p>체크박스로 기준을 선택하고, <strong>⠿ 드래그</strong> 또는 <strong>↑↓ 버튼</strong>으로 중요도 순위를 바꿀 수 있어요. 각 기준의 중요도는 <strong>바로 아래 순위와의 차이</strong>를 뜻해요. (마지막 순위에는 차이를 입력하지 않아요)</p>
+        </div>
+      </section>
+
+      <div className="criteria-footer">
+        <div className="criteria-summary">
+          <strong>선택한 평가요소 {selected.length}개</strong>
+          <span> 중요도 차이는 비슷함(0), 조금 더 중요함(1), 더 중요함(2), 훨씬 더 중요함(3)으로, 해당 기준이 아래 순위에 비해 가지는 중요도 정도를 나타내요.</span>
+        </div>
+        {error && <p role="alert" className="criteria-error">{error}</p>}
+        <div className="criteria-navigation">
+          <button type="button" className="secondary-button" onClick={onBack}>← 기본 조건 수정</button>
+          <button type="button" className="primary-button" onClick={handleNext}>최적의 팝업 공간 추천받기 <Icon name="arrow" size={18} /></button>
+        </div>
       </div>
-      <h3>Soft Filter 선택 가능 여부</h3>
-      <div className="factor-preview-list">
-        {factorPrerequisites.map((factor) => <div className="factor-preview-row" key={factor.name}><span>{factor.name}</span><span className={factor.ready ? 'ready' : 'not-ready'}>{factor.ready ? '선택 가능' : `${factor.needed} 입력 필요`}</span></div>)}
+    </div>
+  );
+}
+
+// Step 03은 아직 추천 엔진이 연결되지 않았습니다. '추천 결과'를 만들어 내지 않고
+// 실제 POST /recommendations에 전달할 Request JSON만 검토하는 개발용 화면입니다.
+function RequestPreview({ filters, softFilters, onBack }) {
+  const request = { hard_filters: filters, soft_filters: softFilters };
+  return (
+    <section className="preview-card" aria-labelledby="request-title">
+      <span className="section-tag">STEP 3 · API 연동 준비용 미리보기</span>
+      <h2 id="request-title">추천 조건 설정이 완료됐어요!</h2>
+      <p>현재 백엔드 추천 API는 아직 연결되지 않았어요. 아래는 추후 <code>POST /recommendations</code>에 전송할 요청 데이터이며, 실제 공간 추천 결과가 아닙니다.</p>
+      <h3>선택한 Soft Filter 중요도 순서</h3>
+      <div className="request-criteria-list">
+        {softFilters.selected.map((id, index) => (
+          <div className="request-criteria" key={id}>
+            <span className="request-rank">{index + 1}</span>
+            <strong>{SOFT_FILTER_META.find((criterion) => criterion.id === id)?.label}</strong>
+            {index < softFilters.selected.length - 1 && <small>다음 기준보다 {GAP_CHOICES.find((item) => item.value === softFilters.importance_gaps[index])?.text}</small>}
+          </div>
+        ))}
       </div>
-      <details className="debug-details"><summary>API 요청용 hard_filters JSON 확인</summary><p>region_ids와 category_id는 실제 CSV의 한글 분류값입니다. API와 연결하기 전에 백엔드와 표현 방식을 맞추면 됩니다.</p><pre>{JSON.stringify(filters, null, 2)}</pre></details>
-      <button type="button" className="secondary-button" onClick={onBack}>← 기본 조건 수정하기</button>
+      <details className="debug-details" open>
+        <summary>API 요청 JSON (Mock — 실제 서버 전송 없음)</summary>
+        <pre>{JSON.stringify(request, null, 2)}</pre>
+      </details>
+      <button type="button" className="secondary-button" onClick={onBack}>← 추천 기준 수정하기</button>
     </section>
   );
 }
 
 function App() {
   const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [softFilters, setSoftFilters] = useState(null);
+  const [previousEligibility, setPreviousEligibility] = useState({});
   const [currentStep, setCurrentStep] = useState(1);
+
   const goToStep = (step) => {
     setCurrentStep(step);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const goToCriteria = () => {
+    const eligibility = Object.fromEntries(SOFT_FILTER_META.map((item) => [item.id, isAvailable(item, filters)]));
+    setSoftFilters((previous) => {
+      if (!previous) return initialSoftFilters(filters);
+      // 선행 정보를 제거하면 해당 요소는 해제하고, 네 가지 자동 선택 조건을 새로 충족할 때만 자동 선택합니다.
+      // 사용자가 수동으로 해제한 요소는 선행 조건이 바뀌지 않는 한 그대로 유지합니다.
+      const retained = previous.selected.filter((id) => eligibility[id]);
+      const newlyEnabled = SOFT_FILTER_META.filter((item) =>
+        item.autoSelect && eligibility[item.id] && !previousEligibility[item.id] && !retained.includes(item.id),
+      ).map((item) => item.id);
+      const selected = [...retained, ...newlyEnabled];
+      return { selected, importance_gaps: normalizeGaps(previous.importance_gaps, selected.length) };
+    });
+    setPreviousEligibility(eligibility);
+    goToStep(2);
   };
 
   return (
@@ -374,9 +699,23 @@ function App() {
       </header>
 
       <main className="page-content">
-        <div className="hero-heading"><span className="hero-eyebrow">데이터 기반 팝업스토어 공간 추천 및 출점 의사결정 지원 시스템</span><h1>좋은 팝업은,<br />좋은 공간에서 시작됩니다.</h1><p>브랜드와 팝업 타깃, 출점 조건에 맞는 팝업 공간을 다양한 데이터를 기반으로 분석하여 추천받고, 후보별 적합도와 추천 근거를 한눈에 비교해보세요.</p></div>
+        {currentStep === 1 ? (
+          <div className="hero-heading">
+            <span className="hero-eyebrow">데이터 기반 팝업스토어 공간 추천 및 출점 의사결정 지원 시스템</span>
+            <h1>좋은 팝업은,<br />좋은 공간에서 시작됩니다.</h1>
+            <p>브랜드와 팝업 타깃, 출점 조건에 맞는 팝업 공간을 다양한 데이터를 기반으로 분석하여 추천받고, 후보별 적합도와 추천 근거를 한눈에 비교해보세요.</p>
+          </div>
+        ) : (
+          <div className="hero-heading step-hero">
+            <span className="hero-eyebrow">데이터 기반 팝업스토어 공간 추천 및 출점 의사결정 지원 시스템</span>
+            <h1>{currentStep === 2 ? '어떤 기준을 중요하게 볼까요?' : '추천 조건 입력을 마쳤어요!'}</h1>
+            <p>{currentStep === 2 ? '공간 추천 시 고려할 평가 기준을 선택하고, 각 기준의 중요도를 설정할 수 있어요.' : '백엔드 연동 전 요청 데이터가 올바르게 생성됐는지 확인할 수 있어요.'}</p>
+          </div>
+        )}
         <StepIndicator currentStep={currentStep} />
-        {currentStep === 1 ? <ConditionsPage filters={filters} setFilters={setFilters} onNext={() => goToStep(2)} /> : <StepTwoPreview filters={filters} onBack={() => goToStep(1)} />}
+        {currentStep === 1 && <ConditionsPage filters={filters} setFilters={setFilters} onNext={goToCriteria} />}
+        {currentStep === 2 && softFilters && <SoftFilterPage filters={filters} softFilters={softFilters} setSoftFilters={setSoftFilters} onBack={() => goToStep(1)} onNext={() => goToStep(3)} />}
+        {currentStep === 3 && softFilters && <RequestPreview filters={filters} softFilters={softFilters} onBack={() => goToStep(2)} />}
       </main>
     </div>
   );
