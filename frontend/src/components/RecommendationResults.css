@@ -296,3 +296,13 @@
   .result-list-items { padding: 9px; gap: 9px; }
   .result-list-items .result-space-pick { min-height: 112px; }
 }
+
+/* Step 04 연결 CTA — 기존 Step 03 화면과 별도 스타일 */
+.result-top-actions .result-whatif-start,.result-empty-actions .result-whatif-start { background: #6863ed; color: #fff; border: 1px solid #6863ed; border-radius: 9px; padding: 10px 13px; font-size: 11px; font-weight: 800; }
+.result-top-actions .result-whatif-start:hover,.result-empty-actions .result-whatif-start:hover { background: #5752d8; color: white; }
+.result-empty-actions { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; align-items: center; }
+.result-whatif-cta { margin-top: 19px; border: 1px solid #e0dfff; border-radius: 13px; padding: 16px 18px; background: #f7f6ff; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.result-whatif-cta strong { color: #4f4caa; font-size: 13px; font-weight: 850; }
+.result-whatif-cta p { margin: 5px 0 0; font-size: 11px; color: #7f86aa; }
+.result-whatif-cta button { border: 0; background: #6761eb; color: white; padding: 11px 15px; border-radius: 9px; font-size: 12px; font-weight: 850; cursor: pointer; white-space: nowrap; }
+@media (max-width: 700px) { .result-whatif-cta { flex-direction: column; align-items: stretch; } .result-whatif-cta button { width: 100%; } .result-top-actions { flex-wrap: wrap; } }
