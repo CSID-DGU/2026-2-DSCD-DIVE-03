@@ -2,13 +2,14 @@
 
 from collections.abc import Mapping, Sequence
 from decimal import Decimal
-from math import dist, fsum, isfinite, sqrt
+from math import dist, isfinite, sqrt
 
 
 _TRAIT_KEYS = (
     "spirited", "trustworthy", "upscale", "stylish",
     "well-organized", "friendly", "sentimental",
 )
+_DEMOGRAPHIC_RATIO_SCALE = 1_000_000
 
 
 def _min_max(
@@ -53,7 +54,7 @@ def rental_price_fit_scores(
 def target_ratio_scores(
     ratios_by_candidate: Sequence[Mapping[str, float]], selected_groups: Sequence[str]
 ) -> list[float]:
-    """Sum selected demographic fractions and normalize across the candidates."""
+    """Sum selected demographic fractions at CSV precision and normalize."""
     if not selected_groups or len(set(selected_groups)) != len(selected_groups):
         raise ValueError("Select at least one demographic group without duplicates.")
 
@@ -64,8 +65,8 @@ def target_ratio_scores(
             ratio = ratios.get(group)
             if ratio is None or not 0 <= ratio <= 1:
                 raise ValueError(f"Demographic group {group!r} requires a fraction in [0, 1].")
-            selected_ratios.append(ratio)
-        totals.append(fsum(selected_ratios))
+            selected_ratios.append(round(ratio * _DEMOGRAPHIC_RATIO_SCALE))
+        totals.append(sum(selected_ratios))
 
     return _min_max(totals, zero_tie_score=0.0)
 
