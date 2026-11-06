@@ -10,14 +10,17 @@ _TRAIT_KEYS = (
 )
 
 
-def _min_max(values: Sequence[float], *, reverse: bool = False) -> list[float]:
+def _min_max(
+    values: Sequence[float], *, reverse: bool = False, zero_tie_score: float = 0.5
+) -> list[float]:
     if not values:
         return []
 
     minimum = min(values)
     maximum = max(values)
     if minimum == maximum:
-        raise ValueError("Min-Max requires at least two distinct values.")
+        tie_score = zero_tie_score if minimum == 0 else 0.5
+        return [tie_score] * len(values)
 
     span = maximum - minimum
     if reverse:
@@ -63,7 +66,7 @@ def target_ratio_scores(
             selected_ratios.append(ratio)
         totals.append(fsum(selected_ratios))
 
-    return _min_max(totals)
+    return _min_max(totals, zero_tie_score=0.0)
 
 
 def popup_history_scores(counts: Sequence[int]) -> list[float]:
@@ -71,7 +74,7 @@ def popup_history_scores(counts: Sequence[int]) -> list[float]:
     if any(type(count) is not int or count < 0 for count in counts):
         raise ValueError("Popup history counts must be non-negative integers.")
 
-    return _min_max(counts)
+    return _min_max(counts, zero_tie_score=0.0)
 
 
 def area_fit_penalties(
