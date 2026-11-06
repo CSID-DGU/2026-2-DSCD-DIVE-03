@@ -1,7 +1,7 @@
 """Calculate Soft Filter scores and intermediate measures for candidate spaces."""
 
 from collections.abc import Mapping, Sequence
-from math import dist, fsum, isfinite
+from math import dist, fsum, isfinite, sqrt
 
 
 _TRAIT_KEYS = (
@@ -124,3 +124,12 @@ def brand_space_distances(
     """Compare the seven shared traits by key and return raw Euclidean distances."""
     brand_vector = _trait_vector(brand_traits)
     return [dist(brand_vector, _trait_vector(profile)) for profile in space_traits]
+
+
+def brand_space_fit_scores(
+    brand_traits: Mapping[str, float], space_traits: Sequence[Mapping[str, float]]
+) -> list[float]:
+    """Convert Euclidean distances to 0–1 fit scores in candidate order."""
+    max_distance = sqrt(len(_TRAIT_KEYS))
+    distances = brand_space_distances(brand_traits, space_traits)
+    return [1.0 - distance / max_distance for distance in distances]
