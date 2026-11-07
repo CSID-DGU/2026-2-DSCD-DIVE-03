@@ -7,8 +7,10 @@ from ml.recommendation.scoring import (
     rental_price_fit_scores,
     target_ratio_scores,
     brand_space_fit_scores,
+    popup_history_scores,
 )
 
+from app.services.popup_history_service import count_popup_history
 
 SUPPORTED_FACTORS = {
     "area_fit",
@@ -16,6 +18,7 @@ SUPPORTED_FACTORS = {
     "rental_price_fit",
     "target_ratio",
     "brand_space_fit",
+    "popup_history",
 }
 
 
@@ -131,5 +134,29 @@ def calculate_soft_scores(candidates, hard_filters, selected, brand_analysis_out
             brand_analysis_out.update(analysis)
         for space_id, score in zip(scores_by_space, scores, strict=True):
             scores_by_space[space_id]["brand_space_fit"] = score
+
+    # 5. 동종 팝업 개최 이력
+    if "popup_history" in selected:
+        category = hard_filters.category_id
+
+        if not category:
+            raise ValueError(
+                "동종 팝업 개최 이력을 선택하려면 "
+                "브랜드 카테고리를 입력해야 합니다."
+            )
+
+        # 권역 + 행정동별 과거 동일 카테고리 팝업 개최 건수
+        counts = count_popup_history(
+            candidates,
+            category=category,
+        )
+
+        # B 담당자의 Min-Max 정규화 함수 사용
+        scores = popup_history_scores(counts)
+
+        # 공간별 점수 저장
+        for space_id, score in zip(scores_by_space, scores):
+            scores_by_space[space_id]["popup_history"] = score
+
 
     return scores_by_space

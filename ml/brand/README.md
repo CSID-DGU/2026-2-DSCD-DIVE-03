@@ -13,7 +13,7 @@
 
 ## 추천 API 연결
 
-brand_space_fit을 선택하고 hard_filters.brand_url을 전달하면 백엔드가 후보의 trait_scores JSON을 읽어 분석 결과와 비교한다. 현재 dev 요청 계약은 soft_filters.weights이며, CSR 요청 계약은 별도 PR에서 변경 중이다.
+brand_space_fit을 선택하고 hard_filters.brand_url을 전달하면 백엔드가 후보의 trait_scores JSON을 읽어 분석 결과와 비교한다. 최신 CSR·팝업 이력 변경을 통합한 요청 계약은 soft_filters.selected와 soft_filters.importance_gaps다. 인접 중요도 차이를 서버에서 CSR 가중치로 계산하며, 응답의 weights는 0~1이다. 분위기 항목 한 개를 선택하면 importance_gaps는 빈 배열이다.
 
 백엔드 실행은 저장소 최상위에서 한다.
 
@@ -54,3 +54,16 @@ trait_config.json은 기존 공간 파이프라인과 같은 mDeBERTa 모델·re
 설명문은 기존 지침의 가격·요금·할인·매출·경영·연혁·배송·고객 소통, 직접적인 Trait 점수 표기를 규칙으로 검사한다. 이미지가 없는데 관찰했다고 쓰거나, 이미지 근거만 있는데 공식 철학으로 단정하는 표현도 검사한다. 기존의 공백·150자 제한은 유지한다. 위반 시 단어만 지우지 않고 같은 원래 근거와 위반 사유로 한 번 다시 작성한다. 두 번째도 실패하면 Trait 계산 전에 오류를 반환한다. description_validation에 시도별 설명·위반 사유·재작성 여부를 기록한다.
 
 이는 기존 제외 지침을 적용하는 규칙 검사이며, 별도의 주관적 품질 점수나 개별 주장에 대한 사실 판정은 아니다. 규칙이 포괄하지 못하는 우회 표현이나 문맥 오류까지 모두 검출한다고 보장하지 않는다.
+
+## CSR 요청 예시
+
+추천 요청의 soft_filters는 다음 형식을 사용한다. 선택 순서는 중요도 순서이고 importance_gaps 길이는 선택 항목 수보다 1개 적다. 기존의 직접 weights 입력 대신 인접 중요도 차이를 전달한다.
+
+```json
+{
+  "selected": ["brand_space_fit", "popup_history", "subway_accessibility"],
+  "importance_gaps": [1, 2]
+}
+```
+
+추천 서비스는 기존 5개 항목과 브랜드 분위기를 합친 6개 항목을 지원한다. 팝업 이력을 선택할 때는 category_id가 필요하며, 팝업 집계·점수와 브랜드 분석 결과는 함께 유지된다.

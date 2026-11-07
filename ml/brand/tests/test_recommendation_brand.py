@@ -37,7 +37,7 @@ class RecommendationBrandTests(unittest.TestCase):
                                  "end_date": "2026-11-11", "region_ids": ["seongsu"],
                                  "brand_url": "https://romand.co.kr/"},
                 "soft_filters": {"selected": ["brand_space_fit"],
-                                 "weights": {"brand_space_fit": 100}},
+                                 "importance_gaps": []},
             })
         self.assertEqual(response.status_code, 200, response.text)
         rows = response.json()["recommendations"]

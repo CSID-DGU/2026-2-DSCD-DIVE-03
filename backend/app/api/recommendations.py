@@ -12,7 +12,7 @@ from app.services.recommendation_service import calculate_soft_scores
 
 # B 담당자가 구현한 Ranking 함수
 from ml.recommendation.ranking import rank_candidates
-
+from ml.recommendation.weighting import csr_weights
 
 router = APIRouter(
     prefix="/recommendations",
@@ -53,11 +53,11 @@ def run_recommendation(request: RecommendationRequest):
         brand_analysis_out=brand_analysis,
     )
 
-    # 5. 사용자 입력 가중치(%)를 0~1로 변환
-    weights = {
-        factor: soft.weights[factor] / 100
-        for factor in soft.selected
-    }
+    # 5. 사용자가 지정한 중요도 순위와 차이로 CSR 가중치 계산
+    weights = csr_weights(
+        selected=soft.selected,
+        importance_gaps=soft.importance_gaps,
+    )
 
     # 6. B 담당자의 Ranking 함수 사용
     ranked = rank_candidates(
