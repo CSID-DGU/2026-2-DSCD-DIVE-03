@@ -45,10 +45,12 @@ def run_recommendation(request: RecommendationRequest):
     )
 
     # 4. 사용자가 선택한 Soft Filter만 점수 계산
+    brand_analysis = {}
     scores_by_space = calculate_soft_scores(
         candidates,
         hard,
         soft.selected,
+        brand_analysis_out=brand_analysis,
     )
 
     # 5. 사용자 입력 가중치(%)를 0~1로 변환
@@ -124,6 +126,7 @@ def run_recommendation(request: RecommendationRequest):
         "hard_filter_count_before_availability": hard_filter_count,
         "weights": weights,
         "recommendations": recommendations,
+        "brand_analysis": brand_analysis or None,
     }
 
 

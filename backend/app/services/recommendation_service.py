@@ -1,9 +1,12 @@
 
+import json
+
 from ml.recommendation.scoring import (
     area_fit_scores,
     subway_accessibility_scores,
     rental_price_fit_scores,
     target_ratio_scores,
+    brand_space_fit_scores,
 )
 
 
@@ -12,10 +15,11 @@ SUPPORTED_FACTORS = {
     "subway_accessibility",
     "rental_price_fit",
     "target_ratio",
+    "brand_space_fit",
 }
 
 
-def calculate_soft_scores(candidates, hard_filters, selected):
+def calculate_soft_scores(candidates, hard_filters, selected, brand_analysis_out=None):
     """
     Hard Filter 통과 공간의 Soft Filter 점수를 계산한다.
 
@@ -107,5 +111,25 @@ def calculate_soft_scores(candidates, hard_filters, selected):
 
         for space_id, score in zip(scores_by_space, scores):
             scores_by_space[space_id]["target_ratio"] = score
+
+    if "brand_space_fit" in selected:
+        if not hard_filters.brand_url:
+            raise ValueError("브랜드 분위기 평가에는 공식 홈페이지 URL이 필요합니다.")
+        from ml.brand.analyzer import get_brand_analyzer
+
+        profiles = []
+        for value in candidates["trait_scores"]:
+            profile = json.loads(value) if isinstance(value, str) else value
+            brand_space_fit_scores(profile, [profile])
+            profiles.append(profile)
+        try:
+            analysis = get_brand_analyzer().analyze(hard_filters.brand_url)
+        except Exception as exc:
+            raise ValueError("브랜드 분석에 실패했습니다. URL과 API 설정을 확인하세요.") from exc
+        scores = brand_space_fit_scores(analysis["trait_scores"], profiles)
+        if brand_analysis_out is not None:
+            brand_analysis_out.update(analysis)
+        for space_id, score in zip(scores_by_space, scores, strict=True):
+            scores_by_space[space_id]["brand_space_fit"] = score
 
     return scores_by_space
