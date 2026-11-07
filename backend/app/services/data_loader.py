@@ -1,7 +1,9 @@
 
 from pathlib import Path
+import os
 
 import pandas as pd
+from dotenv import load_dotenv
 
 
 # 프로젝트 최상위 폴더
@@ -18,7 +20,9 @@ def load_spaces() -> pd.DataFrame:
     """
 
     # 1. CSV 로딩
-    df = pd.read_csv(DATA_PATH, encoding="cp949")
+    load_dotenv(PROJECT_ROOT / ".env", override=False)
+    data_path = Path(os.getenv("POPCAST_SPACE_CSV", str(DATA_PATH)))
+    df = pd.read_csv(data_path, encoding="utf-8-sig")
 
     # 2. 가격을 숫자형으로 변환
     df["price"] = pd.to_numeric(

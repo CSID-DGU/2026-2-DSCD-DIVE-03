@@ -67,50 +67,38 @@ class HardFilters(BaseModel):
 
 
 class SoftFilters(BaseModel):
-    # 소프트 필터 최소 1개 선택 필수
-    # 배열 순서는 중요도 순위
+    # 선택한 평가요소 (중요도 높은 순서)
     selected: list[str] = Field(min_length=1)
 
-    # 사용자가 직접 입력한 가중치 (%)
-    weights: dict[str, float]
+    # 인접한 중요도 순위 사이의 차이
+    # 0: 비슷함
+    # 1: 조금 더 중요함
+    # 2: 더 중요함
+    # 3: 훨씬 더 중요함
+    importance_gaps: list[int] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_soft_filters(self):
         if len(set(self.selected)) != len(self.selected):
-            raise ValueError("같은 평가요소를 중복 선택할 수 없습니다.")
-
-        if set(self.selected) != set(self.weights):
             raise ValueError(
-                "선택한 평가요소와 가중치 항목이 일치해야 합니다."
+                "같은 평가요소를 중복 선택할 수 없습니다."
+            )
+
+        if len(self.importance_gaps) != len(self.selected) - 1:
+            raise ValueError(
+                "중요도 차이 개수는 선택한 평가요소 수보다 1개 적어야 합니다."
             )
 
         if any(
-            not isfinite(weight) or weight < 0 or weight > 100
-            for weight in self.weights.values()
-        ):
-            raise ValueError("가중치는 0~100 사이여야 합니다.")
-
-        if not isclose(
-            sum(self.weights.values()),
-            100.0,
-            rel_tol=0,
-            abs_tol=0.001,
-        ):
-            raise ValueError("가중치 합계는 100%여야 합니다.")
-
-        ordered_weights = [
-            self.weights[factor] for factor in self.selected
-        ]
-
-        if any(
-            ordered_weights[i] < ordered_weights[i + 1]
-            for i in range(len(ordered_weights) - 1)
+            type(gap) is not int or gap < 0 or gap > 3
+            for gap in self.importance_gaps
         ):
             raise ValueError(
-                "가중치는 중요도 순위에 따라 내림차순이어야 합니다."
+                "중요도 차이는 0~3 사이의 정수여야 합니다."
             )
 
         return self
+
 
 
 
@@ -119,6 +107,6 @@ class SoftFilters(BaseModel):
 # ============================================================
 
 class RecommendationRequest(BaseModel):
-    
+
     hard_filters: HardFilters
     soft_filters: SoftFilters
