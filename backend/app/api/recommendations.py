@@ -1,5 +1,6 @@
 
 from uuid import uuid4
+import pandas as pd
 
 from fastapi import APIRouter, HTTPException
 from fastapi.concurrency import run_in_threadpool
@@ -95,6 +96,13 @@ def run_recommendation(request: RecommendationRequest):
             "price_krw": int(row["price"]),
             "area_pyeong": float(row["area_pyeong"]),
             "region": str(row["region_group"]),
+            # 인근 지하철역 정보
+            "nearest_station": (
+            str(row["nearest_station"])
+            if "nearest_station" in row.index
+            and pd.notna(row["nearest_station"])
+            else None
+            ),    
 
             "availability_status": str(
                 row["availability_status"]
