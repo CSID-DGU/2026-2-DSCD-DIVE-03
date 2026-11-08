@@ -2,7 +2,7 @@
 import pandas as pd
 
 
-# 프론트엔드 지역 코드 → CSV 지역명
+# 영문 지역 코드 → CSV 한글 지역명
 REGION_MAP = {
     "seongsu": "성수",
     "gangnam_seocho": "강남·서초",
@@ -22,16 +22,9 @@ def apply_hard_filters(
     """
     POPCAST Hard Filter
 
-    budget_max:
-        최대 대관 예산(원)
-        최대 예산 초과 공간 제외
-
-    regions:
-        None, [], ["all"] → 전체 지역
-        ["seongsu"] → 성수
-        ["seongsu", "hongdae_sinchon"] → 복수 지역
-
-    사용 기간은 availability.py에서 별도 처리.
+    - 최대 예산을 초과하는 공간 제외
+    - 영문 지역 코드와 한글 지역명 모두 지원
+    - 운영 기간은 availability.py에서 별도 처리
     """
 
     filtered = spaces.copy()
@@ -47,24 +40,27 @@ def apply_hard_filters(
 
     # 2. 희망 지역 필터
     if regions and "all" not in regions:
-        invalid_regions = [
-            region
-            for region in regions
-            if region not in REGION_MAP
-        ]
+        valid_region_names = set(REGION_MAP.values())
+
+        selected_regions = []
+        invalid_regions = []
+
+        for region in regions:
+            if region in valid_region_names:
+                selected_regions.append(region)
+            elif region in REGION_MAP:
+                selected_regions.append(REGION_MAP[region])
+            else:
+                invalid_regions.append(region)
 
         if invalid_regions:
             raise ValueError(
-                f"지원하지 않는 지역 코드: {invalid_regions}"
+                f"지원하지 않는 지역: {invalid_regions}"
             )
-
-        selected_regions = [
-            REGION_MAP[region]
-            for region in regions
-        ]
 
         filtered = filtered[
             filtered["region_group"].isin(selected_regions)
         ]
 
+    # 중요: 지역 조건 유무와 관계없이 항상 DataFrame 반환
     return filtered.reset_index(drop=True)
