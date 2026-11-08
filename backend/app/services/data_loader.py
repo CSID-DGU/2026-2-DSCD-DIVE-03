@@ -22,7 +22,10 @@ def load_spaces() -> pd.DataFrame:
     # 1. CSV 로딩
     load_dotenv(PROJECT_ROOT / ".env", override=False)
     data_path = Path(os.getenv("POPCAST_SPACE_CSV", str(DATA_PATH)))
-    df = pd.read_csv(data_path, encoding="utf-8-sig")
+    try:
+        df = pd.read_csv(data_path, encoding="utf-8-sig")
+    except UnicodeDecodeError:
+        df = pd.read_csv(data_path, encoding="cp949")
 
     # 2. 가격을 숫자형으로 변환
     df["price"] = pd.to_numeric(

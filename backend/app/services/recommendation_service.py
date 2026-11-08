@@ -1,6 +1,10 @@
 
 import json
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from ml.recommendation.scoring import (
     area_fit_scores,
     subway_accessibility_scores,
@@ -128,7 +132,10 @@ def calculate_soft_scores(candidates, hard_filters, selected, brand_analysis_out
         try:
             analysis = get_brand_analyzer().analyze(hard_filters.brand_url)
         except Exception as exc:
-            raise ValueError("브랜드 분석에 실패했습니다. URL과 API 설정을 확인하세요.") from exc
+            logger.exception("브랜드 URL 분석 중 오류 발생")
+            raise ValueError(
+                "브랜드 분석에 실패했습니다. URL과 API 설정을 확인하세요."
+            ) from exc
         scores = brand_space_fit_scores(analysis["trait_scores"], profiles)
         if brand_analysis_out is not None:
             brand_analysis_out.update(analysis)
