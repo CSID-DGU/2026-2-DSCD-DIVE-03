@@ -4,6 +4,8 @@ import { FACTOR_LABELS } from '../mocks/recommendations';
 import KakaoMap from './KakaoMap';
 import './RecommendationResults.css';
 
+const IS_REAL_API = import.meta.env.VITE_USE_MOCK_RECOMMENDATIONS === 'false';
+
 const money = (number) => `${Number(number || 0).toLocaleString('ko-KR')}원`;
 const decimal = (number) => Number(number || 0).toLocaleString('ko-KR', { maximumFractionDigits: 2 });
 const percent = (number) => `${Math.round((Number(number) || 0) * 100)}%`;
@@ -154,10 +156,16 @@ function SpaceDetail({ space, weights, selected, onCompare, compared, compareDis
         <div><small>등록 가격</small><strong>{money(space.price_krw)}</strong></div>
         <div><small>인근 역</small><strong>{space.nearest_station || '정보 없음'}</strong></div>
       </div>
-      <div className="result-detail-score"><ScoreCircle score={space.final_score}/><div><strong>종합 적합도</strong><p>선택한 평가요소의 가중합 결과</p><small>시연용 Mock 점수</small></div></div>
+      <div className="result-detail-score">
+        <ScoreCircle score={space.final_score}/>
+        <div>
+          <strong>종합 적합도</strong>
+          <p>선택한 평가요소의 가중합 결과</p>
+      </div>
+      </div>
       <div className="result-detail-section-title"><h3>평가요소별 적합도</h3><span>0–100점</span></div>
       <FactorBreakdown space={space} weights={weights} selected={selected}/>
-      <div className="result-ai-summary"><span>추천 근거 요약 · Mock</span><p>{space.summary}</p></div>
+      <div className="result-ai-summary"><span>추천 근거 요약</span><p>{space.summary}</p></div>
       <div className="result-detail-links">
         <button type="button" className={compared ? 'result-detail-compare is-compared' : 'result-detail-compare'} onClick={onCompare} disabled={!compared && compareDisabled}>
           <SmallIcon type="compare" size={16}/>{compared ? '비교 후보에서 제외' : 'Trade-off 비교 후보로 선택'}
@@ -263,7 +271,6 @@ export default function RecommendationResults({ filters, softFilters, onEditCond
         <div><span className="result-kicker">STEP 3 · 맞춤형 공간 추천</span><h1>브랜드에 어울리는 팝업 공간들을 소개합니다.</h1><p>공간 정보를 비교하고, 가장 적합한 후보를 선택해 보세요.</p></div>
         <div className="result-top-actions"><button type="button" className="result-whatif-start" onClick={() => onOpenWhatIf(result)}>조건 변경 (What-if) ↗</button><button type="button" onClick={onEditConditions}>기본 조건 수정</button><button type="button" onClick={onEditCriteria}><SmallIcon type="refresh" size={15}/> 추천 기준 수정</button></div>
       </div>
-      <div className="result-demo-alert" role="note"><strong>MOCK DEMO</strong><span>공간 기본 정보는 최종 CSV 기반이며, 추천 순위·점수·근거는 개발용 예시입니다. <b>운영 기간별 대관 가능 여부는 확인되지 않았습니다.</b></span></div>
       <div className="result-summary-strip">
         <div><span>조건을 만족하는 공간</span><strong>{result.total_candidates.toLocaleString('ko-KR')}<small>개</small></strong></div>
         <div><span>선택한 추천 기준</span><strong>{selectedFactors.length}<small>개</small></strong></div>
@@ -282,7 +289,6 @@ export default function RecommendationResults({ filters, softFilters, onEditCond
         <section className="result-empty">
           <div className="result-empty-icon"><SmallIcon type="pin" size={28}/></div>
           <h2>현재 조건에 맞는 공간이 없어요.</h2>
-          <p>Mock 데이터에서 선택한 지역과 최대 예산을 동시에 만족하는 공간이 없습니다. 예산을 높이거나 다른 지역을 추가해 보세요. 운영 기간의 실제 예약 가능 여부는 판단하지 않았습니다.</p>
           <div className="result-empty-actions"><button type="button" className="primary-button" onClick={onEditConditions}>기본 조건 다시 설정하기</button><button type="button" className="result-whatif-start" onClick={() => onOpenWhatIf(result)}>What-if로 조건 완화하기</button></div>
           <details className="result-request-json"><summary>전송 요청 JSON 확인</summary><pre>{JSON.stringify(request, null, 2)}</pre></details>
         </section>
