@@ -6,3 +6,4 @@ Pillow>=11,<13
 torch>=2.5,<3
 transformers>=4.45,<5
 sentencepiece>=0.2,<1
+filelock>=3,<5

@@ -14,11 +14,12 @@ def main():
     parser.add_argument("url")
     parser.add_argument("--spaces", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--refresh-brand", action="store_true", help="브랜드 프로필을 새 버전으로 재분석")
     args = parser.parse_args()
     with args.spaces.open(encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
     profiles = [json.loads(row["trait_scores"]) for row in rows]
-    analysis = get_brand_analyzer().analyze(args.url)
+    analysis = get_brand_analyzer().analyze(args.url, refresh=args.refresh_brand)
     scores = brand_space_fit_scores(analysis["trait_scores"], profiles)
     analysis["spaces"] = sorted(
         [{"space_id": row["seq"], "name": row["name"], "brand_space_fit": score}

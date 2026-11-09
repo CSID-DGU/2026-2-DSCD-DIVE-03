@@ -67,3 +67,43 @@ trait_config.json은 기존 공간 파이프라인과 같은 mDeBERTa 모델·re
 ```
 
 추천 서비스는 기존 5개 항목과 브랜드 분위기를 합친 6개 항목을 지원한다. 팝업 이력을 선택할 때는 category_id가 필요하며, 팝업 집계·점수와 브랜드 분석 결과는 함께 유지된다.
+
+## 브랜드 프로필 저장과 재사용
+
+추천 API와 CLI는 성공한 브랜드 분석 결과를 `data/private/brand-profiles/`의 JSON 파일에 저장한다.
+기본 저장 위치는 `POPCAST_BRAND_PROFILE_DIR`로 변경할 수 있다. 이 폴더는 Git 추적에서 제외된다.
+API의 `brand_analysis`에는 `profile_id`, `canonical_brand_url`, `analysis_version`, `analyzed_at`,
+`profile_cache_hit`가 추가된다. 예산·지역·CSR 변경은 브랜드 프로필 키에 포함하지 않는다.
+
+동일성은 정규화한 공식 URL과 분석 버전으로 판단한다. 호스트 대소문자·기본 포트·fragment·utm_*/gclid/fbclid는 정리한다.
+국가별 도메인·경로·의미 있는 쿼리·www 유무·HTTP/HTTPS는 임의로 합치지 않는다.
+브랜드명만으로 합치거나 같은 도메인의 모든 하위 브랜드를 합치지 않는다.
+
+분석 버전은 모델 ID와 프롬프트·가설·수집/분석 코드의 해시다. 저장소 구현은 이 해시에서 제외한다. 성공한 프로필만 저장하며 TTL 자동갱신은 없다.
+같은 URL/버전의 최초 분석은 파일 잠금으로 스레드·프로세스 간 한 번만 수행한다.
+명시적으로 갱신하려면 기존 CLI에 `--refresh-brand`를 추가한다. 새 ID를 발급하고 이전 기록도 보존한다.
+웹 화면의 재분석 버튼은 아직 추가하지 않았다. 최초 추천은 실제 분석을 하므로 외부 수집 실패가 발생할 수 있다.
+서버 재시작 후에는 프로필을 재사용하지만, 현재 구조상 분석기·NLI 모델의 최초 로딩은 필요하다.
+
+### 저장소 교체 경계와 서버 배치
+
+`ProfileStore`는 분석 재사용·검증·ID 발급 정책만 담당한다. `ProfileRepository`의
+`find_latest(url, version)`, `save(profile)`, `lock(url, version)`을 구현하면 저장소를 교체할 수 있다.
+현재 구현은 `JsonProfileRepository`이며 PostgreSQL 어댑터는 아직 구현하지 않았다.
+DB로 옮길 때도 URL/버전 단위의 동시 최초 생성 방지는 DB 잠금/트랜잭션으로 유지해야 한다.
+
+JSON 한 파일은 같은 URL/분석 버전의 프로필 이력을 담는다. 새 파일을 같은 폴더에 임시 작성하고
+flush·fsync 후 원자적으로 교체한다. 저장 실패 시 기존 정상 파일을 유지하며 손상 파일을
+자동으로 무시하고 재분석하지 않는다. 기존 SQLite 파일은 읽거나 삭제하지 않는다.
+
+`POPCAST_BRAND_PROFILE_DIR`의 상대 경로는 실행 위치가 아닌 저장소 최상위 기준으로 해석한다.
+서버에서는 배포·컨테이너 교체 때 지워지지 않는 절대 경로를 지정하고 쓰기 권한을 부여한다.
+여러 서버가 각자 다른 로컬 디스크를 사용하면 프로필도 공유되지 않는다. 일반적인 동일 호스트
+파일시스템과 프로세스 간 잠금이 검증 범위이며, NFS 등의 잠금/원자성은 별도 검증해야 한다.
+
+```dotenv
+POPCAST_BRAND_PROFILE_DIR=/persistent/popcast/brand-profiles
+```
+
+로컬에서 생성된 프로필을 서버에서도 그대로 쓰려면 해당 JSON 파일도 별도로 옮겨야 한다.
+코드만 배포하면 서버의 빈 저장소에서는 최초 분석을 새로 한다. Git에는 분석 산출물을 올리지 않는다.

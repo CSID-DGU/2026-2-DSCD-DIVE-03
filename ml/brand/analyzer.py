@@ -19,14 +19,25 @@ _BAD_IMAGES = (
 
 
 class BrandAnalyzer:
-    def __init__(self, openai_client, firecrawl_client, scorer, model="gpt-4o-mini"):
+    def __init__(self, openai_client, firecrawl_client, scorer, model="gpt-4o-mini", profile_store=None):
+        self.profile_store = profile_store
         self.openai = openai_client
         self.firecrawl = firecrawl_client
         self.scorer = scorer
         self.model = model
         self.prompts = json.loads(Path(__file__).with_name("prompts.json").read_text())
 
-    def analyze(self, brand_url):
+    def analyze(self, brand_url, *, refresh=False):
+        if self.profile_store is None:
+            return self._analyze_uncached(brand_url)
+        from ml.brand.profiles import analysis_version, canonical_url
+        canonical = canonical_url(brand_url)
+        return self.profile_store.get(
+            canonical, analysis_version(self.model),
+            lambda: self._analyze_uncached(canonical), refresh=refresh,
+        )
+
+    def _analyze_uncached(self, brand_url):
         parsed = urlparse(brand_url)
         if (
             parsed.scheme not in ("http", "https")
@@ -171,13 +182,18 @@ def get_brand_analyzer():
     from firecrawl import Firecrawl
     from openai import OpenAI
     from ml.brand.nli import TraitScorer
+    from ml.brand.profiles import ProfileStore
 
     root = Path(__file__).resolve().parents[2]
     load_dotenv(root / ".env", override=False)
     if not os.getenv("OPENAI_API_KEY") or not os.getenv("FIRECRAWL_API_KEY"):
         raise ValueError("OPENAI_API_KEY와 FIRECRAWL_API_KEY를 설정하세요.")
+    profile_directory = Path(os.getenv("POPCAST_BRAND_PROFILE_DIR", "data/private/brand-profiles")).expanduser()
+    if not profile_directory.is_absolute():
+        profile_directory = root / profile_directory
     return BrandAnalyzer(
         OpenAI(timeout=60, max_retries=1),
         Firecrawl(api_key=os.environ["FIRECRAWL_API_KEY"]),
         TraitScorer(device=os.getenv("POPCAST_NLI_DEVICE", "cpu")),
+        profile_store=ProfileStore(profile_directory),
     )
