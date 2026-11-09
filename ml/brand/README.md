@@ -8,7 +8,14 @@
 
 저장소 최상위의 .env에 OPENAI_API_KEY, FIRECRAWL_API_KEY를 설정한다. 셸 환경변수가 우선한다. POPCAST_NLI_DEVICE 기본값은 cpu이며 Mac에서 mps를 지정할 수 있다.
 
-    python -m pip install -r ml/requirements-brand.txt
+백엔드 추천 API까지 실행하려면 Python 3.12 이상 가상환경에서 한 번 설치한다.
+`backend/requirements.txt`가 브랜드 분석 목록을 함께 포함한다.
+
+    python -m pip install -r backend/requirements.txt
+
+브랜드 CLI만 별도로 사용하는 경우에는 `python -m pip install -r ml/requirements-brand.txt`로
+브랜드 패키지만 설치할 수 있다.
+
     python -m ml.brand https://romand.co.kr/ --spaces /path/to/final_spaces.csv --output /tmp/brand-result.json
 
 ## 추천 API 연결
