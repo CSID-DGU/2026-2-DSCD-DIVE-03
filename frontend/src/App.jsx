@@ -747,7 +747,6 @@ function App() {
         <div className="topbar-inner">
           <div className="brand"><span className="brand-mark">P</span><span>POPCAST</span></div>
           <nav className="top-nav" aria-label="상단 메뉴"><span className="nav-link is-current">공간 추천</span><span className="nav-link is-muted" title="추후 구현 예정">팝업 현황</span></nav>
-          <span className="demo-pill">MOCK</span>
         </div>
       </header>
 
