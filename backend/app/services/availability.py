@@ -1,6 +1,10 @@
 
+import json
+import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
+from threading import BoundedSemaphore, local
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -13,9 +17,10 @@ from curl_cffi import requests
 
 API_BASE = "https://shareit-resource.shareit.kr"
 
-session = requests.Session(impersonate="chrome")
-
-session.headers.update({
+MAX_CONCURRENT_SPACES = 4
+_space_slots = BoundedSemaphore(MAX_CONCURRENT_SPACES)
+_sessions = local()
+_HEADERS = {
     "Accept": "application/json",
     "Content-Type": "application/json;charset=UTF-8",
     "Origin": "https://shareit.kr",
@@ -24,7 +29,56 @@ session.headers.update({
         "?showEventTypeHeader=true&eventTypes=29"
     ),
     "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-})
+}
+
+
+def _get_session():
+    """각 작업 스레드가 독립적인 연결·쿠키 상태를 사용한다."""
+    if not hasattr(_sessions, "session"):
+        _sessions.session = requests.Session(impersonate="chrome")
+        _sessions.session.headers.update(_HEADERS)
+    return _sessions.session
+
+
+def _close_session():
+    session = getattr(_sessions, "session", None)
+    if session is not None:
+        try:
+            session.close()
+        finally:
+            del _sessions.session
+
+
+class ScheduleUnsupported(ValueError):
+    """플랫폼이 공간 전체의 실시간 일정 미지원을 명시한 경우."""
+
+
+def get_shareit_schedule_support(space_id: int) -> bool | None:
+    """공식 페이지의 지원 플래그. 조회·파싱 실패는 미지원이 아닌 미확인."""
+    try:
+        response = _get_session().get(
+            f"https://shareit.kr/venue/{space_id}", timeout=10,
+        )
+        response.raise_for_status()
+        final_url = urlparse(response.url)
+        if final_url.hostname not in {"shareit.kr", "www.shareit.kr"}:
+            return None
+        match = re.search(
+            r'<script\b[^>]*\bid=[\"\x27]__NEXT_DATA__[\"\x27][^>]*>(.*?)</script>',
+            response.text, re.DOTALL,
+        )
+        if not match:
+            return None
+        page = json.loads(match.group(1))["props"]["pageProps"]
+        for query in page["dehydratedState"]["queries"]:
+            data = query.get("state", {}).get("data")
+            if isinstance(data, dict) and str(data.get("seq")) == str(space_id):
+                flag = data.get("realTimeSchedule")
+                if isinstance(flag, bool):
+                    return flag
+    except Exception as exc:
+        print(f"[일정 지원 여부 미확인] {space_id}: {exc}")
+    return None
 
 
 # ============================================================
@@ -81,7 +135,7 @@ def get_shareit_timelines(
 
     url = f"{API_BASE}/spaces/{space_id}/time"
 
-    response = session.get(
+    response = _get_session().get(
         url,
         params={
             "searchDate": target_date,
@@ -91,6 +145,13 @@ def get_shareit_timelines(
         timeout=10,
     )
 
+    if response.status_code == 400:
+        try:
+            message = str(response.json().get("message", ""))
+        except (ValueError, AttributeError):
+            message = ""
+        if "실시간일정연동이불가능한공간" in re.sub(r"\s+", "", message):
+            raise ScheduleUnsupported(message)
     response.raise_for_status()
 
     data = response.json()
@@ -168,6 +229,10 @@ def check_shareit_period(
             ):
                 has_unknown = True
 
+        except ScheduleUnsupported:
+            # 공간 자체가 미지원이면 다른 날짜 조회도 의미가 없다.
+            return "assumed_available"
+
         except Exception as exc:
             print(
                 f"[예약 조회 실패] "
@@ -184,6 +249,30 @@ def check_shareit_period(
         return "assumed_available"
 
     return "api_slots_available"
+
+
+def _check_space(row, start_date: str, end_date: str):
+    item = row.copy()
+    status = "assumed_available"
+    source = "not_supported"
+    if is_shareit_space(row["page_url"]):
+        source = "shareit_api"
+        # 여러 추천 요청이 겹쳐도 외부 조회 작업은 최대4개로 제한한다.
+        with _space_slots:
+            try:
+                space_id = int(row["seq"])
+                supported = get_shareit_schedule_support(space_id)
+                if supported is not False:
+                    status = check_shareit_period(space_id, start_date, end_date)
+            except (TypeError, ValueError) as exc:
+                print(f"[공간 ID 오류] {row['name']}: {exc}")
+            finally:
+                _close_session()
+    if status == "api_slots_unavailable":
+        return None
+    item["availability_status"] = status
+    item["availability_source"] = source
+    return item
 
 
 # ============================================================
@@ -217,56 +306,13 @@ def filter_spaces_by_period(
             "종료일은 시작일보다 빠를 수 없습니다."
         )
 
-    results = []
-
-    for _, row in spaces.iterrows():
-
-        item = row.copy()
-
-        # ----------------------------------------
-        # Shareit 공간
-        # ----------------------------------------
-
-        if is_shareit_space(row["page_url"]):
-
-            try:
-                space_id = int(row["seq"])
-
-                status = check_shareit_period(
-                    space_id=space_id,
-                    start_date=start_date,
-                    end_date=end_date,
-                )
-
-            except (TypeError, ValueError) as exc:
-                print(
-                    f"[공간 ID 오류] "
-                    f"{row['name']}: {exc}"
-                )
-                status = "assumed_available"
-
-            source = "shareit_api"
-
-        # ----------------------------------------
-        # 다른 플랫폼 공간
-        # ----------------------------------------
-
-        else:
-            status = "assumed_available"
-            source = "not_supported"
-
-        # ----------------------------------------
-        # 사용 불가능 공간 제외
-        # ----------------------------------------
-
-        if status == "api_slots_unavailable":
-            continue
-
-        # 통과 공간에 예약 상태 추가
-        item["availability_status"] = status
-        item["availability_source"] = source
-
-        results.append(item)
+    with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_SPACES) as pool:
+        # map은 완료 순서와 무관하게 원래 후보 순서를 보존한다.
+        checked = pool.map(
+            lambda row: _check_space(row, start_date, end_date),
+            (row for _, row in spaces.iterrows()),
+        )
+        results = [item for item in checked if item is not None]
 
     # ----------------------------------------
     # 결과 반환
