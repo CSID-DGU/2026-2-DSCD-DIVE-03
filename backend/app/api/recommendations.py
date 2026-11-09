@@ -14,6 +14,7 @@ from app.services.recommendation_service import calculate_soft_scores
 # B 담당자가 구현한 Ranking 함수
 from ml.recommendation.ranking import rank_candidates
 from ml.recommendation.weighting import csr_weights
+from ml.brand.errors import BrandAnalysisError
 
 router = APIRouter(
     prefix="/recommendations",
@@ -146,6 +147,8 @@ async def recommend_spaces(request: RecommendationRequest):
             request,
         )
 
+    except BrandAnalysisError as exc:
+        raise HTTPException(status_code=503, detail=exc.as_detail()) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=400,

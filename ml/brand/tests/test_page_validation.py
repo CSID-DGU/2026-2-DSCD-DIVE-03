@@ -76,7 +76,7 @@ class PageValidationTests(unittest.TestCase):
                                      page('https://romandbeauty.com/pages/campaign/', images=['photo.jpg'])]
         result, text, info, warnings = collect_page(client, 'https://romand.co.kr/')
         self.assertIsNotNone(result)
-        self.assertEqual(text, '')
+        self.assertEqual(text, '공식 내용')
         self.assertEqual(info['image_page_url'], 'https://romandbeauty.com/pages/campaign/')
         self.assertTrue(info['fallback_used'])
         self.assertFalse(info['collection_failed'])
@@ -106,12 +106,13 @@ class PageValidationTests(unittest.TestCase):
         image.assert_called_once_with('https://brand.example/kr/main/banner.jpg')
         self.assertEqual(result['image_sources'], ['https://brand.example/kr/main/banner.jpg'])
 
-    def test_direct_redirect_to_verified_alternate_is_image_only(self):
+    @patch('ml.brand.sources.is_public_host', return_value=True)
+    def test_direct_redirect_to_verified_alternate_includes_text(self, host):
         client = Mock()
         client.scrape.return_value = page('https://romandbeauty.com/pages/new/', text='미국몰 텍스트')
         result, text, info, warnings = collect_page(client, 'https://romand.co.kr/')
         self.assertIsNotNone(result)
-        self.assertEqual(text, '')
+        self.assertEqual(text, '미국몰 텍스트')
         self.assertTrue(info['fallback_used'])
         self.assertEqual(info['image_page_url'], 'https://romandbeauty.com/pages/new/')
         client.scrape.assert_called_once()
@@ -123,7 +124,7 @@ class PageValidationTests(unittest.TestCase):
                                      page('https://romandbeauty.com/', images=['photo.jpg'])]
         result, text, info, warnings = collect_page(client, 'https://romand.co.kr/')
         self.assertIsNotNone(result)
-        self.assertEqual(text, '')
+        self.assertEqual(text, '공식 내용')
         self.assertTrue(info['fallback_used'])
         self.assertFalse(info['collection_failed'])
         self.assertEqual(info['original_failure_reason'], 'HTTP 404')

@@ -9,6 +9,7 @@ from ml.brand.images import is_public_host, prepare_image
 from ml.brand.sources import collect_page, official_source
 from ml.brand.duplicates import ImageDuplicates
 from ml.brand.descriptions import build_description
+from ml.brand.errors import BrandInputError, evidence_error
 from ml.recommendation.scoring import brand_space_fit_scores
 
 
@@ -33,7 +34,7 @@ class BrandAnalyzer:
             or not parsed.hostname or parsed.username or parsed.password
             or not is_public_host(parsed.hostname)
         ):
-            raise ValueError("공개된 HTTP(S) 브랜드 홈페이지 URL을 입력하세요.")
+            raise BrandInputError("공개된 HTTP(S) 브랜드 홈페이지 URL을 입력하세요.")
         registered = official_source(brand_url)
         research_tool = {"type": "web_search", "search_context_size": "medium"}
         research_domains = [parsed.hostname.removeprefix("www.")]
@@ -77,20 +78,6 @@ class BrandAnalyzer:
             images.append({"url": url, "data_uri": data_uri})
             if len(images) == 5:
                 break
-        vision_text = ""
-        if images:
-            response = self.openai.responses.create(
-                model=self.model,
-                input=[{"role": "user", "content": [
-                    {"type": "input_text", "text": self.prompts["vision"] + "\n이미지 출처: " + collection["image_page_url"] + "\n" + (collection["fallback_scope"] or "입력한 공식 홈페이지")},
-                    *[{"type": "input_image", "image_url": item["data_uri"], "detail": "low"}
-                      for item in images],
-                ]}],
-                max_output_tokens=1000,
-            )
-            vision_text = response.output_text
-        else:
-            warnings.append("분석 가능한 공식 이미지가 없어 텍스트 근거로 분석했습니다.")
         sources = []
         for item in research.output or []:
             if hasattr(item, "model_dump"):
@@ -134,8 +121,34 @@ class BrandAnalyzer:
             research_text = ""
             sources = []
             warnings.append("공식 도메인 근거가 검증되지 않은 웹 검색 요약은 분석에서 제외했습니다.")
-        if not research_text.strip() and not home_text.strip() and not vision_text.strip():
-            raise ValueError("브랜드 특성을 분석할 근거를 수집하지 못했습니다.")
+        # Only validated text can support recovery from a failed vision call.
+        has_verified_text = bool(research_text.strip() or home_text.strip())
+        vision_text = ""
+        image_analysis_status = "not_available"
+        if images:
+            try:
+                response = self.openai.responses.create(
+                    model=self.model,
+                    input=[{"role": "user", "content": [
+                        {"type": "input_text", "text": self.prompts["vision"] + "\n이미지 출처: " + collection["image_page_url"] + "\n" + (collection["fallback_scope"] or "입력한 공식 홈페이지")},
+                        *[{"type": "input_image", "image_url": item["data_uri"], "detail": "low"}
+                          for item in images],
+                    ]}],
+                    max_output_tokens=1000,
+                )
+                vision_text = response.output_text or ""
+                image_analysis_status = "succeeded" if vision_text.strip() else "empty"
+            except Exception:
+                if not has_verified_text:
+                    raise
+                image_analysis_status = "failed"
+            if not vision_text.strip() and has_verified_text:
+                warnings.append("이미지 분석 근거를 확보하지 못해 검증된 텍스트만으로 분석했습니다.")
+        else:
+            warnings.append("분석 가능한 공식 이미지가 없어 텍스트 근거로 분석했습니다.")
+        used_image_count = len(images) if vision_text.strip() else 0
+        if not has_verified_text and not vision_text.strip():
+            raise evidence_error(collection, source_validation, used_image_count)
         task = {
             "brand_name": parsed.hostname,
             "official_url": brand_url,
@@ -145,7 +158,7 @@ class BrandAnalyzer:
             "image_collection": collection,
         }
         description, description_validation = build_description(
-            self.openai, self.model, self.prompts["final"], task, len(images),
+            self.openai, self.model, self.prompts["final"], task, used_image_count,
         )
         traits = self.scorer.score(description)
         # Apply existing validation to the seven Trait keys and score ranges.
@@ -155,6 +168,8 @@ class BrandAnalyzer:
             "research_sources": sources, "image_sources": [x["url"] for x in images],
             "warnings": warnings, "model": self.model,
             "image_collection": collection, "visual_observations": vision_text,
+            "image_analysis": {"status": image_analysis_status,
+                               "collected_count": len(images), "used_count": used_image_count},
             "research_summary": research_text,
             "research_domains": research_domains, "research_rejected": research_rejected,
             "research_source_validation": source_validation,
@@ -178,6 +193,6 @@ def get_brand_analyzer():
         raise ValueError("OPENAI_API_KEY와 FIRECRAWL_API_KEY를 설정하세요.")
     return BrandAnalyzer(
         OpenAI(timeout=60, max_retries=1),
-        Firecrawl(api_key=os.environ["FIRECRAWL_API_KEY"]),
+        Firecrawl(api_key=os.environ["FIRECRAWL_API_KEY"], timeout=40, max_retries=1),
         TraitScorer(device=os.getenv("POPCAST_NLI_DEVICE", "cpu")),
     )
