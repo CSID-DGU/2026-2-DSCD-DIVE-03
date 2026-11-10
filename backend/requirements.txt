@@ -1,3 +1,7 @@
+# Python >=3.12 is required by numpy==2.5.4.
+# Includes the brand URL / Trait pipeline used by the recommendation API.
+-r ../ml/requirements-brand.txt
+
 agent-detector==2.0.0
 annotated-doc==0.0.5
 annotated-types==0.8.0
