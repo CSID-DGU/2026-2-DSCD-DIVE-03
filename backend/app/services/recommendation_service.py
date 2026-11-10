@@ -15,6 +15,9 @@ from ml.recommendation.scoring import (
 )
 
 from app.services.popup_history_service import count_popup_history
+from ml.brand.errors import BrandAnalysisError, BrandInputError
+from ml.brand.urls import canonical_url
+from requests.exceptions import Timeout as RequestTimeout
 
 SUPPORTED_FACTORS = {
     "area_fit",
@@ -122,6 +125,8 @@ def calculate_soft_scores(candidates, hard_filters, selected, brand_analysis_out
     if "brand_space_fit" in selected:
         if not hard_filters.brand_url:
             raise ValueError("브랜드 분위기 평가에는 공식 홈페이지 URL이 필요합니다.")
+        # Validate syntax before loading the model or calling external services.
+        brand_url = canonical_url(hard_filters.brand_url)
         from ml.brand.analyzer import get_brand_analyzer
 
         profiles = []
@@ -130,11 +135,32 @@ def calculate_soft_scores(candidates, hard_filters, selected, brand_analysis_out
             brand_space_fit_scores(profile, [profile])
             profiles.append(profile)
         try:
-            analysis = get_brand_analyzer().analyze(hard_filters.brand_url)
+            analysis = get_brand_analyzer().analyze(brand_url)
+        except BrandInputError:
+            raise
+        except BrandAnalysisError:
+            logger.exception("브랜드 분석 근거 수집 실패")
+            raise
         except Exception as exc:
             logger.exception("브랜드 URL 분석 중 오류 발생")
-            raise ValueError(
-                "브랜드 분석에 실패했습니다. URL과 API 설정을 확인하세요."
+            if isinstance(exc, RequestTimeout):
+                raise BrandAnalysisError(
+                    'BRAND_COLLECTION_TIMEOUT',
+                    '브랜드 자료 수집 요청 시간이 초과되었습니다.',
+                    action='잠시 후 다시 시도해 주세요. 반복되면 수집 서비스 연결 상태를 확인해 주세요.',
+                ) from exc
+            status = getattr(exc, 'status_code', None)
+            if status in (401, 403):
+                message = '브랜드 분석 외부 API 인증 또는 접근 권한을 확인해 주세요.'
+                code = 'BRAND_PROVIDER_ACCESS_ERROR'
+            elif status == 429:
+                message = '브랜드 분석 외부 API의 요청 한도 또는 사용량 한도에 도달했습니다.'
+                code = 'BRAND_PROVIDER_LIMIT'
+            else:
+                message = '브랜드 분석 초기화 또는 외부 서비스 요청에 실패했습니다. 서버 로그와 API 연결 상태를 확인해 주세요.'
+                code = 'BRAND_SERVICE_UNAVAILABLE'
+            raise BrandAnalysisError(
+                code, message,
             ) from exc
         scores = brand_space_fit_scores(analysis["trait_scores"], profiles)
         if brand_analysis_out is not None:

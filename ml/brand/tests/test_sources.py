@@ -24,7 +24,7 @@ class SourceTests(unittest.TestCase):
         client.scrape.side_effect = [page('Checking your Browser…', ['/cafe24.svg']), alternate]
         result, text, info, warnings = collect_page(client, 'https://romand.co.kr/')
         self.assertIs(result, alternate)
-        self.assertEqual(text, '')
+        self.assertEqual(text, '미국 공식몰 설명')
         self.assertTrue(info['fallback_used'])
         self.assertEqual(info['image_page_url'], 'https://romandbeauty.com/')
         self.assertEqual(info['fallback_evidence_url'], 'https://linktr.ee/romandyou')
@@ -76,7 +76,7 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(result['image_sources'], ['https://romandbeauty.com/campaign.jpg'])
         final_input = ai.responses.create.call_args.kwargs['input']
         self.assertNotIn('Checking your Browser', final_input)
-        self.assertIn('미국 공식몰', final_input)
+        self.assertIn('alternate', final_input)
         research_call = ai.responses.create.call_args_list[0].kwargs
         self.assertEqual(result['research_domains'], ['romand.co.kr', 'romandbeauty.com'])
         self.assertTrue(result['research_rejected'])
