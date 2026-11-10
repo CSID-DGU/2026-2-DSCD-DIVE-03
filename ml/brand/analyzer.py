@@ -3,6 +3,7 @@
 import json
 from functools import lru_cache
 from pathlib import Path
+from threading import Lock
 from urllib.parse import urljoin, urlparse
 
 from ml.brand.images import is_public_host, prepare_image
@@ -164,8 +165,17 @@ class BrandAnalyzer:
         }
 
 
-@lru_cache(maxsize=1)
+_initialization_lock = Lock()
+
+
 def get_brand_analyzer():
+    # Lock outside the cache: simultaneous misses share one construction.
+    with _initialization_lock:
+        return _create_brand_analyzer()
+
+
+@lru_cache(maxsize=1)
+def _create_brand_analyzer():
     import os
     from dotenv import load_dotenv
     from firecrawl import Firecrawl
