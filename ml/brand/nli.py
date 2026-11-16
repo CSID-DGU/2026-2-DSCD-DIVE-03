@@ -11,7 +11,9 @@ class TraitScorer:
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
         torch.set_num_threads(4)
-        self.config = json.loads(Path(__file__).with_name("trait_config.json").read_text())
+        self.config = json.loads(
+            Path(__file__).with_name("trait_config.json").read_text(encoding="utf-8")
+        )
         self.torch = torch
         self.device = device
         self.lock = Lock()
