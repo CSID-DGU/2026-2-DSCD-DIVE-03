@@ -10,11 +10,13 @@ from app.services.data_loader import load_spaces
 from app.services.hard_filter import apply_hard_filters
 from app.services.availability import filter_spaces_by_period
 from app.services.recommendation_service import calculate_soft_scores
+from app.services.recommendation_store import save_recommendation
 
 # B 담당자가 구현한 Ranking 함수
 from ml.recommendation.ranking import rank_candidates
 from ml.recommendation.weighting import csr_weights
 from ml.brand.errors import BrandAnalysisError
+
 
 router = APIRouter(
     prefix="/recommendations",
@@ -48,6 +50,7 @@ def run_recommendation(request: RecommendationRequest):
 
     # 4. 사용자가 선택한 Soft Filter만 점수 계산
     brand_analysis = {}
+
     scores_by_space = calculate_soft_scores(
         candidates,
         hard,
@@ -97,19 +100,20 @@ def run_recommendation(request: RecommendationRequest):
             "price_krw": int(row["price"]),
             "area_pyeong": float(row["area_pyeong"]),
             "region": str(row["region_group"]),
+
             # 인근 지하철역 정보
             "nearest_station": (
-            str(row["nearest_station"])
-            if "nearest_station" in row.index
-            and pd.notna(row["nearest_station"])
-            else None
-            ),    
+                str(row["nearest_station"])
+                if "nearest_station" in row.index
+                and pd.notna(row["nearest_station"])
+                else None
+            ),
 
             "availability_status": str(
                 row["availability_status"]
             ),
 
-            # B 모델에서 계산한 종합점수 및 평가요소
+            # B 모델에서 계산한 종합점수
             "final_score": round(
                 result["final_score"], 4
             ),
@@ -129,9 +133,13 @@ def run_recommendation(request: RecommendationRequest):
         })
 
     # 8. 최종 API 응답
+    # What-if에서 기존 추천 조건과 결과를 재사용할 수 있도록
+    # hard_filters, soft_filters를 함께 반환
     return {
         "recommendation_id": f"rec_{uuid4().hex[:12]}",
         "total_candidates": len(recommendations),
+        "hard_filters": hard.model_dump(mode="json"),
+        "soft_filters": soft.model_dump(mode="json"),
         "hard_filter_count_before_availability": hard_filter_count,
         "weights": weights,
         "recommendations": recommendations,
@@ -142,13 +150,23 @@ def run_recommendation(request: RecommendationRequest):
 @router.post("")
 async def recommend_spaces(request: RecommendationRequest):
     try:
-        return await run_in_threadpool(
+        # 기존 추천 알고리즘 실행
+        result = await run_in_threadpool(
             run_recommendation,
             request,
         )
 
+        # What-if에서 recommendation_id로 조회할 수 있도록 저장
+        save_recommendation(result)
+
+        return result
+
     except BrandAnalysisError as exc:
-        raise HTTPException(status_code=503, detail=exc.as_detail()) from exc
+        raise HTTPException(
+            status_code=503,
+            detail=exc.as_detail(),
+        ) from exc
+
     except ValueError as exc:
         raise HTTPException(
             status_code=400,
