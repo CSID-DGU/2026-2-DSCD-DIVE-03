@@ -332,9 +332,6 @@ function ScenarioChanges({ baseline, result }) {
         </p>
       )}
 
-      <p className="whatif-subnote">
-        기준 추천 ID: {baseline.recommendation_id}
-      </p>
     </div>
   );
 }
@@ -1485,11 +1482,7 @@ export default function WhatIfAnalysis({
             </p>
           )}
 
-          <details className="whatif-json">
-            <summary>API 요청 JSON 확인</summary>
-            <pre>{JSON.stringify(request, null, 2)}</pre>
-          </details>
-        </section>
+
 
         {/* ================================================== */}
         {/* 2번 박스: 추천 결과 */}
