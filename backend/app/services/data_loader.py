@@ -19,13 +19,26 @@ def load_spaces() -> pd.DataFrame:
     Hard Filter에 사용할 데이터 타입을 정리한다.
     """
 
+    
     # 1. CSV 로딩
     load_dotenv(PROJECT_ROOT / ".env", override=False)
-    data_path = Path(os.getenv("POPCAST_SPACE_CSV", str(DATA_PATH)))
+
+    configured_path = os.getenv("POPCAST_SPACE_CSV")
+
+    if configured_path:
+        data_path = Path(configured_path)
+        if not data_path.is_absolute():
+            data_path = PROJECT_ROOT / data_path
+    else:
+        data_path = DATA_PATH
+
+    print(f"[POPCAST] CSV 경로: {data_path}")
+
     try:
         df = pd.read_csv(data_path, encoding="utf-8-sig")
     except UnicodeDecodeError:
         df = pd.read_csv(data_path, encoding="cp949")
+
 
     # 2. 가격을 숫자형으로 변환
     df["price"] = pd.to_numeric(
