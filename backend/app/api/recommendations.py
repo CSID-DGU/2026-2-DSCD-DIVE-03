@@ -1,4 +1,4 @@
-
+from app.services.recommendation_store import put_recommendation
 from uuid import uuid4
 import pandas as pd
 
@@ -128,8 +128,9 @@ def run_recommendation(request: RecommendationRequest):
             },
         })
 
+
     # 8. 최종 API 응답
-    return {
+    response = {
         "recommendation_id": f"rec_{uuid4().hex[:12]}",
         "total_candidates": len(recommendations),
         "hard_filter_count_before_availability": hard_filter_count,
@@ -137,6 +138,11 @@ def run_recommendation(request: RecommendationRequest):
         "recommendations": recommendations,
         "brand_analysis": brand_analysis or None,
     }
+
+    # Trade-off 분석에서 사용할 추천 결과 저장
+    put_recommendation(response)
+
+    return response
 
 
 @router.post("")
