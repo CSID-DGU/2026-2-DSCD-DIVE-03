@@ -6,6 +6,7 @@ from fastapi.concurrency import run_in_threadpool
 from app.schemas.trade_off import TradeOffRequest
 from app.services.recommendation_store import get_recommendation
 from app.services.trade_off_service import compare_recommendations
+from app.services.trade_off_llm import add_llm_explanation
 
 router = APIRouter(prefix="/analyses", tags=["Analyses"])
 
@@ -18,7 +19,15 @@ async def analyze_trade_off(request: TradeOffRequest):
             status_code=404,
             detail="추천 결과를 찾을 수 없거나 만료되었습니다. 추천을 다시 실행해 주세요.",
         )
+
     try:
-        return await run_in_threadpool(compare_recommendations, snapshot, request.space_ids)
+        result = await run_in_threadpool(
+            compare_recommendations, snapshot, request.space_ids
+        )
+
+        return await run_in_threadpool(
+            add_llm_explanation, result
+        )
+
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
