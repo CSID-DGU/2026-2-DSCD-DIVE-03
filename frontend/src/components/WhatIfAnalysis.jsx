@@ -1,6 +1,8 @@
-
-import { useMemo, useState } from 'react';
-import { createWhatIfAnalysis } from '../services/whatIf';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  createWhatIfAnalysis,
+  explainWhatIfSpace,
+} from '../services/whatIf';
 import { FACTOR_LABELS } from '../mocks/recommendations';
 import './WhatIfAnalysis.css';
 
@@ -355,12 +357,126 @@ function getContribution(space, key, weights) {
   return Number(score) * Number(weight);
 }
 
+
+function StructuredAnalysis({ text, type = "overall" }) {
+  if (!text) return null;
+
+  const configs = {
+    overall: {
+      "후보 구성": { icon: "📊", title: "후보 구성 변화" },
+      "조건 영향": { icon: "⚙️", title: "주요 조건 영향" },
+      "중요도·지역": { icon: "📍", title: "중요도 및 지역 특성" },
+      "TOP 5 변화": { icon: "🏆", title: "상위 추천 변화" },
+    },
+    space: {
+      "추천 변화": { icon: "📈", title: "추천 결과 변화" },
+      "상대적 강점": { icon: "✅", title: "상대적 강점" },
+      "주요 기여 요인": { icon: "🎯", title: "주요 기여 요인" },
+      "종합 해석": { icon: "💡", title: "종합 해석" },
+    },
+  };
+
+  const config = configs[type] || configs.overall;
+
+  const sections = String(text)
+    .split(/\r?\n/)
+    .map((line) => {
+      const match = line.trim().match(/^\[([^\]]+)\]\s*(.+)$/);
+
+      if (!match) return null;
+
+      const key = match[1].trim();
+      const content = match[2].trim();
+
+      if (!config[key] || !content) return null;
+
+      return {
+        key,
+        content,
+        ...config[key],
+      };
+    })
+    .filter(Boolean);
+
+  // 기존에 생성된 긴 설명이나 형식이 다른 응답도 표시
+  if (sections.length === 0) {
+    return (
+      <p style={{
+        margin: 0,
+        lineHeight: 1.75,
+        fontSize: 14,
+        color: "#475569",
+        whiteSpace: "pre-line",
+      }}>
+        {text}
+      </p>
+    );
+  }
+
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      gap: 12,
+    }}>
+      {sections.map((section) => (
+        <div
+          key={section.key}
+          style={{
+            display: "flex",
+            gap: 12,
+            padding: "13px 15px",
+            background: "#ffffff",
+            border: "1px solid #e7e9f4",
+            borderRadius: 10,
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              fontSize: 17,
+              flexShrink: 0,
+              lineHeight: 1.5,
+            }}
+          >
+            {section.icon}
+          </span>
+
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: "#333b55",
+              marginBottom: 5,
+            }}>
+              {section.title}
+            </div>
+
+            <p style={{
+              margin: 0,
+              fontSize: 13,
+              lineHeight: 1.7,
+              color: "#64748b",
+              overflowWrap: "anywhere",
+            }}>
+              {section.content}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
 function SelectedSpaceAnalysis({
   space,
   oldSpace,
   baseline,
   updated,
   scenario,
+  llmSummary,
+  llmLoading,
 }) {
   const [metric, setMetric] = useState('score');
 
@@ -551,10 +667,18 @@ function SelectedSpaceAnalysis({
   // 5-3. Mock 정량 요약 / 실제 LLM 응답
   // ----------------------------------------------------------
 
-  const backendSummary =
-    scenario?.space_analyses?.[space.space_id]?.summary ??
-    scenario?.space_summaries?.[space.space_id] ??
-    null;
+  
+const spaceAnalysis =
+  scenario?.space_analyses?.[String(space.space_id)];
+
+const backendSummary =
+  llmSummary?.summary ??
+  spaceAnalysis?.summary ??
+  null;
+
+const isLLMSummary =
+  llmSummary?.summary_type === 'llm';
+
 
   let mockSummary = '';
 
@@ -758,26 +882,187 @@ function SelectedSpaceAnalysis({
         )}
       </div>
 
-      {/* 개별 공간 주요 변화 요약 */}
-      <h3>선택 공간 주요 변화 분석</h3>
+      
 
-      <div className="whatif-summary-card">
-        <b>
-          {backendSummary
-            ? 'AI 주요 변화 분석'
-            : 'Mock 데이터 기반 정량 요약'}
-        </b>
+{/* 개별 공간 주요 변화 요약 */}
+<h3>선택 공간 주요 변화 분석</h3>
 
-        <p>{backendSummary || mockSummary}</p>
+{(() => {
+  // 위의 '가중 기여도' 그래프와 동일한 계산 결과를 그대로 재사용합니다.
+  // topContributors는 getContribution()을 사용해 산출한 변경 후 기여도순 목록입니다.
+  const validContributors = topContributors
+    .filter((item) => Number.isFinite(item.after))
+    .slice(0, 2);
+
+  const strengths = [...relativeFactors]
+    .filter((item) => item.difference > 0)
+    .sort((a, b) => b.difference - a.difference)
+    .slice(0, 2);
+
+  const weaknesses = [...relativeFactors]
+    .filter((item) => item.difference < 0)
+    .sort((a, b) => a.difference - b.difference)
+    .slice(0, 2);
+
+  const getInterpretation = (text) => {
+    const lines = String(text || "").split(/\r?\n/);
+
+    const line = lines.find((item) =>
+      item.trim().startsWith("[종합 해석]")
+    );
+
+    return line
+      ? line.replace(/^\s*\[종합 해석\]\s*/, "").trim()
+      : "";
+  };
+
+  const interpretation = getInterpretation(
+    llmSummary?.summary
+  );
+
+  const fallback = isNew
+    ? `변경 후 ${space.rank}위로 신규 진입했습니다. 평가요소별 강점과 가중 기여도를 함께 확인할 수 있습니다.`
+    : `종합점수 변화와 추천 순위 변화는 일치하지 않을 수 있습니다. 다른 후보들의 진입·이탈과 상대적 점수 변화도 고려해야 합니다.`;
+
+  const smallTitle = {
+    fontSize: 13,
+    fontWeight: 700,
+    marginBottom: 8,
+  };
+
+  const rowStyle = {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    fontSize: 13,
+    padding: "5px 0",
+  };
+
+  return (
+    <div className="whatif-summary-card">
+      <b>선택 공간 정량 분석</b>
+
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        gap: 14,
+        margin: "16px 0",
+      }}>
+        <div>
+          <div style={{ fontSize: 12, color: "#64748b" }}>
+            추천 순위
+          </div>
+          <strong style={{ fontSize: 19 }}>
+            {isNew
+              ? `신규 진입 · ${space.rank}위`
+              : `${oldSpace.rank}위 → ${space.rank}위`}
+          </strong>
+        </div>
+
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 12, color: "#64748b" }}>
+            종합 적합도
+          </div>
+          <strong style={{ fontSize: 19 }}>
+            {isNew
+              ? `${fmt(space.final_score)}점`
+              : `${fmt(oldSpace.final_score)} → ${fmt(space.final_score)}점`}
+          </strong>
+        </div>
       </div>
 
-      {!backendSummary && (
-        <p className="whatif-warning">
-          현재 실제 LLM 분석이 아닌 Mock 추천 데이터 기반
-          설명입니다. 정확한 Hard Filter 진입 원인과
-          지역별 특성 분석은 Backend 연동 후 제공됩니다.
+      <div style={{
+        borderTop: "1px solid #e8eaf3",
+        paddingTop: 14,
+      }}>
+        <div style={smallTitle}>✅ 상대적 강점</div>
+
+        {strengths.length ? strengths.map((item) => (
+          <div key={item.key} style={rowStyle}>
+            <span>{FACTOR_LABELS[item.key] || item.key}</span>
+            <strong style={{ color: "#16a34a" }}>
+              평균 대비 +{fmt(item.difference)}점
+            </strong>
+          </div>
+        )) : (
+          <p style={{ fontSize: 13 }}>
+            후보 평균보다 높은 평가요소 없음
+          </p>
+        )}
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <div style={smallTitle}>⚠️ 상대적 약점</div>
+
+        {weaknesses.length ? weaknesses.map((item) => (
+          <div key={item.key} style={rowStyle}>
+            <span>{FACTOR_LABELS[item.key] || item.key}</span>
+            <strong style={{ color: "#e11d48" }}>
+              평균 대비 {fmt(item.difference)}점
+            </strong>
+          </div>
+        )) : (
+          <p style={{ fontSize: 13 }}>
+            후보 평균보다 낮은 평가요소 없음
+          </p>
+        )}
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <div style={smallTitle}>
+          🎯 종합점수 주요 기여 요소
+        </div>
+
+        {validContributors.length ? (
+          validContributors.map((item) => (
+            <div key={item.key} style={rowStyle}>
+              <span>
+                {FACTOR_LABELS[item.key] || item.key}
+                {item.before != null && Number.isFinite(item.before)
+                  ? ` · 변경 전 ${fmt(item.before)}점`
+                  : ''}
+              </span>
+
+              <strong>
+                기여 {fmt(item.after)}점
+                {item.delta != null && Number.isFinite(item.delta)
+                  ? ` (${Math.abs(item.delta) < 0.05
+                      ? '변화 없음'
+                      : `${item.delta > 0 ? '+' : ''}${fmt(item.delta)}점`})`
+                  : ''}
+              </strong>
+            </div>
+          ))
+        ) : (
+          <p style={{ fontSize: 13 }}>
+            표시할 가중 기여도 데이터가 없습니다.
+          </p>
+        )}
+      </div>
+
+      <div style={{
+        borderTop: "1px solid #e8eaf3",
+        paddingTop: 14,
+        marginTop: 14,
+      }}>
+        <div style={smallTitle}>💡 AI 핵심 해석</div>
+        <p style={{
+          fontSize: 13,
+          color: "#475569",
+          lineHeight: 1.7,
+          margin: 0,
+        }}>
+          {llmLoading
+            ? "주요 변화 요인을 분석하고 있습니다."
+            : interpretation || fallback}
         </p>
-      )}
+      </div>
+    </div>
+  );
+})()}
+
+
+
     </div>
   );
 }
@@ -801,6 +1086,8 @@ export default function WhatIfAnalysis({
 
   const [mode, setMode] = useState('conditions');
   const [scenario, setScenario] = useState(null);
+  const [spaceSummaries, setSpaceSummaries] = useState({});
+  const [spaceLLMLoading, setSpaceLLMLoading] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -993,6 +1280,58 @@ export default function WhatIfAnalysis({
       setLoading(false);
     }
   };
+  
+useEffect(() => {
+  const scenarioId = scenario?.scenario_id;
+
+  if (!scenarioId || selectedSpaceId == null) {
+    return;
+  }
+
+  const sid = String(selectedSpaceId);
+  const key = `${scenarioId}:${sid}`;
+
+  // 이미 분석한 공간은 다시 요청하지 않음
+  if (spaceSummaries[key]) {
+    setSpaceLLMLoading(false);
+    return;
+  }
+
+  let cancelled = false;
+
+  const fetchExplanation = async () => {
+    setSpaceLLMLoading(true);
+
+    try {
+      const result = await explainWhatIfSpace(
+        scenarioId,
+        sid
+      );
+
+      if (!cancelled) {
+        setSpaceSummaries((prev) => ({
+          ...prev,
+          [key]: result,
+        }));
+      }
+    } catch (error) {
+      console.error(
+        '선택 공간 LLM 분석 실패:',
+        error
+      );
+    } finally {
+      if (!cancelled) {
+        setSpaceLLMLoading(false);
+      }
+    }
+  };
+
+  fetchExplanation();
+
+  return () => {
+    cancelled = true;
+  };
+}, [scenario?.scenario_id, selectedSpaceId, spaceSummaries]);
 
   // ----------------------------------------------------------
   // 6-4. 전후 추천 결과 구성
@@ -1343,12 +1682,6 @@ export default function WhatIfAnalysis({
                   }
                 />
               </label>
-
-              <p className="whatif-input-note">
-                희망 면적은 후보 제외 조건이 아니라 점수
-                계산에 사용해요. 운영 기간은 Mock에서
-                예약 가능 여부를 검증하지 않아요.
-              </p>
             </div>
           ) : (
             <div
@@ -1643,23 +1976,177 @@ export default function WhatIfAnalysis({
             </div>
           ) : (
             <>
-              {/* 3-1. 전체 변화 요약 */}
-              <h3>전체 변화 요약</h3>
+              
+            
+{/* 3-1. 전체 변화 요약 */}
+<h3>전체 변화 요약</h3>
 
-              <div className="whatif-summary-card">
-                <b>
-                  {scenario.overall_analysis?.summary ||
-                  scenario.overall_summary
-                    ? 'AI 전체 변화 분석'
-                    : 'Mock 변화 요약'}
-                </b>
+{(() => {
+  const impacts = (scenario.factor_impacts || [])
+    .filter((item) =>
+      item.changed &&
+      Number.isFinite(Number(item.candidate_change))
+    );
 
-                <p>
-                  {scenario.overall_analysis?.summary ||
-                    scenario.overall_summary ||
-                    scenario.summary}
-                </p>
-              </div>
+  const positive = [...impacts]
+    .filter((item) => Number(item.candidate_change) > 0)
+    .sort((a, b) => b.candidate_change - a.candidate_change)[0];
+
+  const negative = [...impacts]
+    .filter((item) => Number(item.candidate_change) < 0)
+    .sort((a, b) => a.candidate_change - b.candidate_change)[0];
+
+  const beforeTop5 = (baseline?.recommendations || [])
+    .slice()
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, 5);
+
+  const afterTop5 = (
+    scenario.updated_recommendation?.recommendations || []
+  )
+    .slice()
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, 5);
+
+  const beforeIds = new Set(
+    beforeTop5.map((item) => String(item.space_id))
+  );
+
+  const retained = afterTop5.filter((item) =>
+    beforeIds.has(String(item.space_id))
+  ).length;
+
+  const newCount = afterTop5.length - retained;
+
+  const rawSummary =
+    scenario.overall_analysis?.summary ||
+    scenario.overall_summary ||
+    scenario.summary ||
+    "";
+
+  const lines = String(rawSummary)
+    .split(/\r?\n/)
+    .map((line) => line.trim());
+
+  const interpretation =
+    lines.find((line) => line.startsWith("[조건 영향]"))
+      ?.replace(/^\[조건 영향\]\s*/, "")
+    || lines.find((line) => line.startsWith("[TOP 5 변화]"))
+      ?.replace(/^\[TOP 5 변화\]\s*/, "")
+    || "";
+
+  const comparison = scenario.candidate_comparison || {};
+
+  const difference = Number(comparison.after) -
+    Number(comparison.before);
+
+  const factorText =
+    positive && negative
+      ? `${positive.label} 단독 변경은 후보 확대 방향으로, ${negative.label} 단독 변경은 후보 축소 방향으로 나타났습니다.`
+      : positive
+        ? `${positive.label} 단독 변경 시 후보가 증가했습니다.`
+        : negative
+          ? `${negative.label} 단독 변경 시 후보가 감소했습니다.`
+          : "변경된 조건의 단독 영향 분석을 확인해 보세요.";
+
+  const fallback = Number.isFinite(difference)
+    ? `${factorText} 모든 조건을 함께 변경한 결과 후보 수는 ${Math.abs(difference)}개 ${difference > 0 ? "증가" : difference < 0 ? "감소" : "유지"}했습니다.`
+    : factorText;
+
+  const impactCard = (item, label) => (
+    <div style={{
+      flex: 1,
+      minWidth: 170,
+      padding: 15,
+      borderRadius: 12,
+      background: "#f7f8fc",
+      border: "1px solid #e8eaf3",
+    }}>
+      <div style={{
+        fontSize: 12,
+        color: "#64748b",
+        marginBottom: 7,
+      }}>
+        {label}
+      </div>
+      <div style={{
+        fontSize: 14,
+        fontWeight: 700,
+        marginBottom: 6,
+      }}>
+        {item?.label || "해당 조건 없음"}
+      </div>
+      <div style={{
+        fontSize: 23,
+        fontWeight: 800,
+        color: item
+          ? Number(item.candidate_change) > 0
+            ? "#16a34a"
+            : "#e11d48"
+          : "#94a3b8",
+      }}>
+        {item
+          ? `${Number(item.candidate_change) > 0 ? "+" : ""}${item.candidate_change}개`
+          : "—"}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="whatif-summary-card">
+      <b>AI 변화 요인 분석</b>
+
+      <div style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 12,
+        marginTop: 14,
+      }}>
+        {impactCard(positive, "후보 확대 방향 단독 영향")}
+        {impactCard(negative, "후보 축소 방향 단독 영향")}
+      </div>
+
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 8,
+        padding: "14px 0",
+        marginTop: 10,
+        borderBottom: "1px solid #e8eaf3",
+      }}>
+        <span style={{ fontSize: 13 }}>TOP 5 구성 변화</span>
+        <strong style={{ fontSize: 13 }}>
+          {retained}개 유지 · {newCount}개 신규 진입
+        </strong>
+      </div>
+
+      <div style={{ marginTop: 15 }}>
+        <strong style={{ fontSize: 13 }}>
+          💡 AI 핵심 해석
+        </strong>
+        <p style={{
+          fontSize: 13,
+          lineHeight: 1.7,
+          margin: "8px 0 0",
+          color: "#475569",
+        }}>
+          {interpretation || fallback}
+        </p>
+      </div>
+
+      <p style={{
+        fontSize: 11,
+        color: "#94a3b8",
+        marginTop: 12,
+      }}>
+        조건별 후보 변화는 기준 조건에서 하나씩 변경한 결과입니다.
+      </p>
+    </div>
+  );
+})()}
+
 
               {/* 3-2. 조건별 후보 수 변화 */}
             
@@ -1794,6 +2281,7 @@ export default function WhatIfAnalysis({
               {/* 3-3. 선택 공간 상세 분석 */}
               <h3>선택 공간의 평가요소별 변화</h3>
 
+              
               <SelectedSpaceAnalysis
                 key={String(selectedSpaceId ?? '')}
                 space={selectedSpace}
@@ -1801,18 +2289,17 @@ export default function WhatIfAnalysis({
                 baseline={baseline}
                 updated={updatedRecommendation}
                 scenario={scenario}
+                llmSummary={
+                  spaceSummaries[
+                    `${scenario?.scenario_id}:${String(selectedSpaceId)}`
+                  ]
+                }
+                llmLoading={spaceLLMLoading}
               />
 
-              <p className="whatif-warning">
-                현재 Mock 결과는 등록 가격·지역에
-                따른 후보 수 변화를 반영하며,
-                실시간 예약 여부와 공식 CSR/NLI 및
-                LLM 분석 결과는 아닙니다.
-              </p>
 
               <details className="whatif-json">
-                <summary>분석 API 응답 JSON 확인</summary>
-
+              
                 <pre>
                   {JSON.stringify(
                     {
