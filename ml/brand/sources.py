@@ -10,7 +10,9 @@ from ml.brand.errors import collection_failure_message
 
 
 def official_source(brand_url):
-    registry = json.loads(Path(__file__).with_name("official_sources.json").read_text())
+    registry = json.loads(
+    Path(__file__).with_name("official_sources.json").read_text(encoding="utf-8")
+)
     return registry.get(urlparse(brand_url).hostname)
 
 

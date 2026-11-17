@@ -58,7 +58,10 @@ class ProfilesTests(unittest.TestCase):
    files=list(Path(d).glob('*.json'))
    self.assertEqual(len(files),1)
    self.assertFalse(list(Path(d).glob('*.sqlite3')))
-   self.assertEqual(json.loads(files[0].read_text())['profiles'][0]['profile_id'],first['profile_id'])
+   self.assertEqual(
+    json.loads(files[0].read_text(encoding="utf-8"))["profiles"][0]["profile_id"],
+    first["profile_id"]
+)
    with patch('ml.brand.profile_repository.os.replace',side_effect=OSError('interrupted write')):
     with self.assertRaises(OSError):store.get('https://example.com/','v1',sample,refresh=True)
    self.assertEqual(store.get('https://example.com/','v1',lambda:None)['profile_id'],first['profile_id'])
@@ -97,7 +100,10 @@ print(ProfileStore(sys.argv[1]).get('https://example.com/','v1',create)['profile
     self.assertEqual(job.returncode,0,err)
     ids.append(out.strip())
    self.assertEqual(len(set(ids)),1)
-   self.assertEqual((Path(d)/'calls.txt').read_text().splitlines(),['created'])
+   self.assertEqual(
+    (Path(d) / "calls.txt").read_text(encoding="utf-8").splitlines(),
+    ["created"]
+)
 
  def test_corrupt_json_does_not_silently_reanalyze(self):
   from pathlib import Path

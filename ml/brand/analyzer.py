@@ -27,8 +27,9 @@ class BrandAnalyzer:
         self.firecrawl = firecrawl_client
         self.scorer = scorer
         self.model = model
-        self.prompts = json.loads(Path(__file__).with_name("prompts.json").read_text())
-
+        self.prompts = json.loads(
+        Path(__file__).with_name("prompts.json").read_text(encoding="utf-8")
+)
     def analyze(self, brand_url, *, refresh=False):
         if self.profile_store is None:
             return self._analyze_uncached(brand_url)

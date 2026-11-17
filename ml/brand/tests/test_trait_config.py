@@ -5,7 +5,10 @@ import unittest
 
 class TraitConfigTests(unittest.TestCase):
     def test_seven_brand_hypotheses_preserve_trait_order(self):
-        config = json.loads((Path(__file__).resolve().parents[1] / "trait_config.json").read_text())
+        config = json.loads(
+    (Path(__file__).resolve().parents[1] / "trait_config.json")
+    .read_text(encoding="utf-8")
+)
         self.assertEqual(list(config["hypotheses"]), [
             "spirited", "trustworthy", "upscale", "stylish",
             "well-organized", "friendly", "sentimental",
