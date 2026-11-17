@@ -1,4 +1,4 @@
-
+from app.services.recommendation_store import put_recommendation
 from uuid import uuid4
 import pandas as pd
 
@@ -132,10 +132,11 @@ def run_recommendation(request: RecommendationRequest):
             },
         })
 
+
+   
     # 8. 최종 API 응답
-    # What-if에서 기존 추천 조건과 결과를 재사용할 수 있도록
-    # hard_filters, soft_filters를 함께 반환
-    return {
+    # What-if 및 Trade-off에서 기존 추천 조건과 결과를 재사용
+    response = {
         "recommendation_id": f"rec_{uuid4().hex[:12]}",
         "total_candidates": len(recommendations),
         "hard_filters": hard.model_dump(mode="json"),
@@ -145,6 +146,11 @@ def run_recommendation(request: RecommendationRequest):
         "recommendations": recommendations,
         "brand_analysis": brand_analysis or None,
     }
+
+    # Trade-off에서 사용할 추천 결과 저장
+    put_recommendation(response)
+
+    return response
 
 
 @router.post("")
