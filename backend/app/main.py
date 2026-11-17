@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.recommendations import router as recommendations_router
+from app.api.trade_off import router as trade_off_router
 
 
 app = FastAPI(
@@ -22,6 +23,8 @@ app.add_middleware(
 # 추천 API 등록
 app.include_router(recommendations_router)
 
+# Trade-off 분석 API 등록
+app.include_router(trade_off_router)
 
 @app.get("/health")
 def health_check():
