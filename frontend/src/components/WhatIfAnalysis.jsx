@@ -1082,13 +1082,6 @@ export default function WhatIfAnalysis({
         </button>
       </div>
 
-      <div className="whatif-demo-note">
-        <b>MOCK DEMO</b>
-        실제 예약 가능 여부와 AI 해석이 아닌 시연용
-        분석입니다. 후보 수는 현재 Mock 엔진의 지역·등록
-        가격 기준을 사용합니다.
-      </div>
-
       <div className="whatif-grid">
 
         {/* ================================================== */}
