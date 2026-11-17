@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FACTOR_LABELS } from '../mocks/recommendations';
 import { createTradeOffAnalysis } from '../services/tradeOff';
+import { splitTradeOffNarrative } from '../services/tradeOffNarrative';
 import './TradeOffAnalysis.css';
 
 const formatScore = (v) => Number(v ?? 0).toFixed(1);
@@ -10,10 +11,8 @@ const formatWeight = (v) => `${(Number(v || 0) * 100).toFixed(1)}%`;
 const factorTitle = (key) => FACTOR_LABELS[key] || key;
 const safeScore = (value) => Math.max(0, Math.min(100, Number(value) || 0));
 function NarrativeSummary({ summary }) {
-  // 원래 LLM 답변은 그대로 유지하고 우선순위별 추천 문장만 분리합니다.
-  const paragraphs = String(summary || '분석 요약 정보가 없습니다.')
-    .split(/(?=적합도 우선이라면|비용 우선이라면|종합적으로는)/g)
-    .map((part) => part.trim()).filter(Boolean);
+  // 각 추천 문단의 시작 줄에서만 분리해 본문 속 동일한 표현으로 카드가 쪼개지지 않게 합니다.
+  const paragraphs = splitTradeOffNarrative(summary);
   return paragraphs.map((paragraph, index) => (
     <p key={`${index}-${paragraph.slice(0, 15)}`} className={/^(적합도 우선이라면|비용 우선이라면|종합적으로는)/.test(paragraph) ? 'tradeoff-priority-line' : ''}>
       {paragraph}
