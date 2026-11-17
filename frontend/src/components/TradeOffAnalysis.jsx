@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FACTOR_LABELS } from '../mocks/recommendations';
 import { createTradeOffAnalysis } from '../services/tradeOff';
+import { splitTradeOffNarrative } from '../services/tradeOffNarrative';
 import './TradeOffAnalysis.css';
 
 const formatScore = (v) => Number(v ?? 0).toFixed(1);
@@ -9,6 +10,15 @@ const formatArea = (v) => v == null ? '정보 없음' : `${Number(v).toLocaleStr
 const formatWeight = (v) => `${(Number(v || 0) * 100).toFixed(1)}%`;
 const factorTitle = (key) => FACTOR_LABELS[key] || key;
 const safeScore = (value) => Math.max(0, Math.min(100, Number(value) || 0));
+function NarrativeSummary({ summary }) {
+  // 각 추천 문단의 시작 줄에서만 분리해 본문 속 동일한 표현으로 카드가 쪼개지지 않게 합니다.
+  const paragraphs = splitTradeOffNarrative(summary);
+  return paragraphs.map((paragraph, index) => (
+    <p key={`${index}-${paragraph.slice(0, 15)}`} className={/^(적합도 우선이라면|비용 우선이라면|종합적으로는)/.test(paragraph) ? 'tradeoff-priority-line' : ''}>
+      {paragraph}
+    </p>
+  ));
+}
 
 function SpacePhoto({ space }) {
   const [failed, setFailed] = useState(false);
@@ -96,6 +106,7 @@ export default function TradeOffAnalysis({ baseline, spaceIds, onBack }) {
   const [analysis, setAnalysis] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
   const idsKey = Array.isArray(spaceIds) ? spaceIds.join('|') : '';
   const request = useMemo(() => ({ recommendation_id: baseline?.recommendation_id, space_ids: idsKey.split('|').filter(Boolean) }), [baseline?.recommendation_id, idsKey]);
 
@@ -106,10 +117,10 @@ export default function TradeOffAnalysis({ baseline, spaceIds, onBack }) {
     setAnalysis(null);
     Promise.resolve().then(() => createTradeOffAnalysis(request, baseline))
       .then((response) => { if (active) setAnalysis(response); })
-      .catch((err) => { if (active) setError(err?.message || '비교 결과를 불러오지 못했어요.'); })
+      .catch((err) => { if (active) setError({ message: err?.message || '비교 결과를 불러오지 못했어요.', status: err?.status ?? null }); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [baseline, request]);
+  }, [baseline, request, retryCount]);
 
   const spaces = analysis?.spaces?.map((item) => {
     const original = baseline?.recommendations?.find((s) => s.space_id === item.space_id) || {};
@@ -130,8 +141,8 @@ export default function TradeOffAnalysis({ baseline, spaceIds, onBack }) {
       </div>
 
       <div className="tradeoff-demo-note" role="note"><b>{mock ? 'MOCK DEMO' : 'TRADE-OFF'}</b><span>{mock ? '비교 공간 정보는 최종 CSV 기반입니다. 점수·가중치·장단점은 현재 추천 Mock을 재사용하며 실제 AI 분석이나 예약 가능 여부 검증 결과가 아닙니다.' : '추천 결과의 동일한 평가 기준으로 공간 두 곳을 비교합니다. 실제 대관 조건은 별도로 확인해 주세요.'}</span></div>
-      {loading && <div className="tradeoff-loading" role="status">선택한 두 공간을 비교하고 있어요…</div>}
-      {!loading && error && <div className="tradeoff-error" role="alert"><h2>비교 분석을 불러오지 못했어요.</h2><p>{error}</p><button type="button" onClick={onBack}>추천 결과로 돌아가기</button></div>}
+      {loading && <div className="tradeoff-loading" role="status" aria-live="polite"><strong>선택한 두 공간을 비교하고 있어요…</strong><small>AI 종합 설명 생성 시 잠시 더 걸릴 수 있습니다.</small></div>}
+      {!loading && error && <div className="tradeoff-error" role="alert"><h2>비교 분석을 불러오지 못했어요.</h2><p>{error.message}</p><div className="tradeoff-error-actions">{error.status !== 404 && <button type="button" onClick={() => setRetryCount((count) => count + 1)}>다시 시도하기</button>}<button type="button" onClick={onBack}>추천 결과로 돌아가기</button></div>{error.status === 404 && <small>추천 결과가 만료되었을 수 있습니다. 추천을 새로 실행해 주세요.</small>}</div>}
       {!loading && !error && analysis && (!a || !b) && <div className="tradeoff-error" role="alert"><h2>비교할 공간 정보가 부족해요.</h2><button type="button" onClick={onBack}>추천 결과로 돌아가기</button></div>}
       {!loading && !error && a && b && (
         <>
@@ -148,7 +159,7 @@ export default function TradeOffAnalysis({ baseline, spaceIds, onBack }) {
             <div className="tradeoff-panel-title"><div><span>01 · 점수 비교</span><h2 id="tradeoff-factor-title">평가요소별 적합도 및 가중 기여도</h2><p>두 공간의 동일 평가요소를 100점 만점으로 비교해요. 선택한 평가요소만 나타납니다.</p></div><span className="tradeoff-factor-count">{analysis.factor_comparison?.length || 0}개 평가요소</span></div>
             <div className="tradeoff-factor-header"><b>공간 A · {a.name}</b><span>평가요소</span><b>공간 B · {b.name}</b></div>
             {analysis.factor_comparison?.length ? analysis.factor_comparison.map((entry) => <FactorRow key={entry.factor} entry={entry} a={a} b={b} weights={analysis.weights}/>) : <p className="tradeoff-no-factors">비교할 평가요소가 없어요.</p>}
-            <p className="tradeoff-footnote">* 적합도 점수는 0~100점이며, 기여도는 적합도 점수 × 선택한 가중치입니다. Mock 추천 계산에 따른 값입니다.</p>
+            <p className="tradeoff-footnote">* 적합도 점수는 0~100점이며, 기여도는 적합도 점수 × 선택한 가중치입니다. {mock ? 'Mock 추천 점수를 사용합니다.' : '실제 추천 엔진에서 반환된 점수입니다.'}</p>
           </section>
           <section className="tradeoff-panel" aria-labelledby="tradeoff-pros-title">
             <div className="tradeoff-panel-title"><div><span>02 · 상대적 장단점</span><h2 id="tradeoff-pros-title">어떤 공간이 어떤 기준에서 유리할까요?</h2><p>선택한 두 공간의 평가요소 점수 차이를 바탕으로 정리했어요.</p></div></div>
@@ -159,7 +170,7 @@ export default function TradeOffAnalysis({ baseline, spaceIds, onBack }) {
           </section>
           <section className="tradeoff-panel tradeoff-narrative" aria-label="종합 비교 요약">
             <div className="tradeoff-panel-title"><div><span>03 · 비교 요약</span><h2>종합 비교 및 추가 고려사항</h2></div></div>
-            <div className="tradeoff-summary"><strong>{mock ? 'Mock 비교 요약' : '비교 요약'}</strong><p>{analysis.summary || '분석 요약 정보가 없습니다.'}</p></div>
+            <div className="tradeoff-summary"><strong>{mock ? 'Mock 비교 요약' : analysis.summary_source === 'llm' ? 'AI 종합 비교 및 우선순위별 추천' : '정량 분석 기반 비교 요약'}</strong><NarrativeSummary summary={analysis.summary}/>{!mock && analysis.llm_status === 'unavailable' && <small className="tradeoff-explain-status">AI 설명 생성에 실패하여 실제 점수에 기반한 기본 분석을 표시합니다.</small>}</div>
             <div className="tradeoff-consider"><strong>최종 결정 전 확인할 사항</strong><p>{analysis.additional_considerations || '실제 대관 조건과 일정, 브랜드 콘셉트를 함께 검토해 주세요.'}</p></div>
           </section>
           <details className="tradeoff-json"><summary>개발용 API Request·Response JSON 보기</summary><pre>{JSON.stringify({ request, response: analysis }, null, 2)}</pre></details>

@@ -121,3 +121,29 @@
   .tradeoff-bottom { flex-direction: column; align-items: stretch; }
   .tradeoff-bottom button { width: 100%; }
 }
+/* Issue #51: conditional recommendations, loading and retry states */
+.tradeoff-summary p.tradeoff-priority-line { background: #fff; border-left: 3px solid #766fee; border-radius: 5px; padding: 9px 12px; margin-top: 10px; font-weight: 650; white-space: pre-wrap; }
+.tradeoff-explain-status { display: block; margin-top: 12px; color: #875b50; font-size: 11px; line-height: 1.6; }
+.tradeoff-loading strong { font-size: 14px; color: #56607d; }
+.tradeoff-loading small, .tradeoff-error small { font-size: 11px; line-height: 1.6; color: #8792a7; }
+.tradeoff-error-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+
+/* Trade-off: AI 요약과 최종 고려사항 디자인 통일 */
+.tradeoff-narrative .tradeoff-consider {
+  background: #f6f5ff;
+  border: 1px solid #e4e2fc;
+}
+
+/* 최종 고려사항 제목도 보라색으로 통일 */
+.tradeoff-narrative .tradeoff-consider > strong {
+  color: #645fe0;
+}
+
+/* LLM 설명의 한글 줄바꿈을 어절 단위로 처리 */
+.tradeoff-narrative .tradeoff-summary p,
+.tradeoff-narrative .tradeoff-consider p {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
+}
