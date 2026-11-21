@@ -48,3 +48,8 @@ export function getBenchmarkMapPoints({ region = '전체', district = '전체', 
     region, district, start_date: startDate, end_date: endDate, as_of: asOf,
   }, signal);
 }
+
+// Commit 5: 행정동별 등록 대관 공간 목록 (기간 필터 미적용)
+export function getBenchmarkSpaces(region, { district = '전체', minArea, maxArea, minPrice, maxPrice, page = 1, pageSize = 8, signal } = {}) {
+  return requestBenchmark('spaces', { region, district, min_area: minArea, max_area: maxArea, min_price: minPrice, max_price: maxPrice, page, page_size: pageSize }, signal);
+}

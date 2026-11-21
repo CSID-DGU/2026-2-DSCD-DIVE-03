@@ -2,7 +2,9 @@ import BenchmarkGeoMap from './BenchmarkGeoMap';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getBenchmarkDistricts } from '../services/benchmark';
 import { BenchmarkStatus, KPI, CategoryDonut, DistrictBars, MonthlyLine, numberLabel, percentLabel } from './BenchmarkCharts';
+import BenchmarkSpaceList from './BenchmarkSpaceList';
 import './BenchmarkPages.css';
+import './BenchmarkSpaces.css';
 
 export default function BenchmarkDistrict({ region, onBack }) {
   const [dong, setDong] = useState('전체');
@@ -49,7 +51,7 @@ export default function BenchmarkDistrict({ region, onBack }) {
           <div className="benchmark-panel"><h2>행정동별 팝업 개최 건수</h2><DistrictBars districts={data?.districts} metric="popup_count" selectedDistrict={dong} onSelectDistrict={setDong}/></div>
           <div className="benchmark-panel"><h2>팝업 카테고리 비중 {dong !== '전체' ? `(${dong})` : ''}</h2><CategoryDonut data={summary?.category_counts} total={summary?.popup_count}/></div>
         </div>
-        <div className="benchmark-panel"><h2>대관 공간 목록</h2><p className="benchmark-subtext">선택한 행정동에 등록된 대관 공간을 표시합니다.</p><div className="benchmark-placeholder tall">공간별 상세 목록 API · 연동 예정</div></div>
+        <div className="benchmark-panel benchmark-spaces-panel"><BenchmarkSpaceList region={region} district={dong} /></div>
       </section>
       <section className="benchmark-bottom-grid"><div className="benchmark-panel"><h2>월별 팝업 개최 추이 {dong !== '전체' ? `(${dong})` : ''}</h2><MonthlyLine data={summary?.monthly_open_counts}/></div>
         <div className="benchmark-panel"><h2>행정동별 대관 공간 수 ({region})</h2><DistrictBars districts={data?.districts} metric="space_count" selectedDistrict={dong} onSelectDistrict={setDong}/></div>

@@ -7,6 +7,7 @@ from app.api.what_if import router as what_if_router
 from app.api.trade_off import router as trade_off_router
 from app.api.benchmark import router as benchmark_router
 from app.api.benchmark_map import router as benchmark_map_router
+from app.api.benchmark_spaces import router as benchmark_spaces_router
 
 app = FastAPI(
     title="POPCAST API",
@@ -38,3 +39,6 @@ app.include_router(benchmark_router)
 
 # 벤치마크 지도 API 등록
 app.include_router(benchmark_map_router)
+
+# 벤치마크 대관 공간 API
+app.include_router(benchmark_spaces_router)
