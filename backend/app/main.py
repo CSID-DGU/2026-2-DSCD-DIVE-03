@@ -10,6 +10,7 @@ from app.api.benchmark_map import router as benchmark_map_router
 from app.api.benchmark_spaces import router as benchmark_spaces_router
 from app.api.benchmark_population import router as benchmark_population_router
 
+
 app = FastAPI(
     title="POPCAST API",
     description="POPCAST 팝업스토어 공간 추천 서비스 API",
@@ -27,6 +28,7 @@ app.add_middleware(
 # 추천 API 등록
 app.include_router(recommendations_router)
 app.include_router(what_if_router)
+app.include_router(trade_off_router)
 
 # Trade-off 분석 API 등록
 app.include_router(trade_off_router)

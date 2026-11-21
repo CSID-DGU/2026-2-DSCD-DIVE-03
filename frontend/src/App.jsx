@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import './App.css';
+import { POPUP_HISTORY_MODES } from './services/popupHistoryDirection';
 import RecommendationResults from './components/RecommendationResults';
 import WhatIfAnalysis from './components/WhatIfAnalysis';
 import TradeOffAnalysis from './components/TradeOffAnalysis';
@@ -404,8 +405,8 @@ const SOFT_FILTER_META = [
   },
   {
     id: 'popup_history', label: '동종 팝업 개최 이력', icon: 'store',
-    brief: '해당 지역에서 동종 카테고리 팝업이 열린 빈도',
-    detail: '해당 공간 지역에서 과거에 동일 카테고리의 팝업이 얼마나 많이 개최되었는지 평가해요.',
+    brief: '과거 동종 카테고리 팝업 개최 빈도에 대한 선호',
+    detail: '브랜드와 같은 카테고리의 과거 팝업 개최 건수를 권역·행정동 기준으로 비교합니다. 아래에서 많이 개최된 지역과 적게 개최된 지역 중 원하는 방향을 선택해 주세요.',
     requires: 'category_id', requiredLabel: '브랜드 카테고리', autoSelect: true,
   },
   {
@@ -454,7 +455,7 @@ function initialSoftFilters(filters) {
   const selected = SOFT_FILTER_META.filter((item) =>
     item.autoSelect && isAvailable(item, filters),
   ).map((item) => item.id);
-  return { selected, importance_gaps: normalizeGaps([], selected.length) };
+  return { selected, importance_gaps: normalizeGaps([], selected.length), popup_history_direction: "frequent" };
 }
 
 function SoftFilterPage({ filters, softFilters, setSoftFilters, onBack, onNext }) {
@@ -467,6 +468,7 @@ function SoftFilterPage({ filters, softFilters, setSoftFilters, onBack, onNext }
 
   const updateSelected = (nextSelected) => {
     setSoftFilters((previous) => ({
+      ...previous,
       selected: nextSelected,
       importance_gaps: normalizeGaps(previous.importance_gaps, nextSelected.length),
     }));
@@ -567,6 +569,46 @@ function SoftFilterPage({ filters, softFilters, setSoftFilters, onBack, onNext }
             <span className="criterion-brief">{criterion.brief}</span>
           </div>
           {infoId === criterion.id && <p className="criterion-explanation">{criterion.detail}</p>}
+          {criterion.id === 'popup_history' && active && available && (
+            <div className="history-direction" role="radiogroup" aria-label="동종 팝업 개최 이력 선호 방향">
+              <strong className="history-direction-title">어떤 개최 빈도를 선호하시나요?</strong>
+              <div className="history-direction-options">
+                {POPUP_HISTORY_MODES.map((mode) => (
+                  <div
+                    className={`history-direction-option ${(softFilters.popup_history_direction || 'frequent') === mode.value ? 'is-active' : ''}`}
+                    key={mode.value}
+                  >
+                    <label className="history-direction-label">
+                      <input
+                        type="radio"
+                        name="popup-history-direction"
+                        value={mode.value}
+                        checked={(softFilters.popup_history_direction || 'frequent') === mode.value}
+                        onChange={() => setSoftFilters((previous) => ({ ...previous, popup_history_direction: mode.value }))}
+                      />
+                      <span>
+                        <strong>{mode.title}</strong>
+                        <small>{mode.subtitle}</small>
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      className="history-direction-info"
+                      aria-label={`${mode.title} 상세 설명`}
+                      aria-expanded={infoId === `popup_history:${mode.value}`}
+                      onClick={() => setInfoId((previous) => previous === `popup_history:${mode.value}` ? null : `popup_history:${mode.value}`)}
+                    >ⓘ</button>
+                  </div>
+                ))}
+              </div>
+              {POPUP_HISTORY_MODES.map((mode) =>
+                infoId === `popup_history:${mode.value}` ? (
+                  <p className="history-direction-detail" key={mode.value}>{mode.detail}</p>
+                ) : null,
+              )}
+              <small className="history-direction-hint">둘 중 하나만 선택할 수 있어요. 중요도 순위는 하나의 평가요소로 유지됩니다.</small>
+            </div>
+          )}
           {disabled && <p className="criterion-requirement">선택하려면 기본 조건에서 {criterion.requiredLabel}을(를) 입력해야 해요.</p>}
         </div>
         <div className="criterion-actions">
@@ -674,7 +716,7 @@ function App() {
         item.autoSelect && eligibility[item.id] && !previousEligibility[item.id] && !retained.includes(item.id),
       ).map((item) => item.id);
       const selected = [...retained, ...newlyEnabled];
-      return { selected, importance_gaps: normalizeGaps(previous.importance_gaps, selected.length) };
+      return { ...previous, selected, importance_gaps: normalizeGaps(previous.importance_gaps, selected.length) };
     });
     setPreviousEligibility(eligibility);
     goToStep(2);

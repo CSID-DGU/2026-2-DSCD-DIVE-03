@@ -29,7 +29,10 @@ SUPPORTED_FACTORS = {
 }
 
 
-def calculate_soft_scores(candidates, hard_filters, selected, brand_analysis_out=None):
+def calculate_soft_scores(
+    candidates, hard_filters, selected, brand_analysis_out=None,
+    popup_history_direction="frequent",
+):
     """
     Hard Filter 통과 공간의 Soft Filter 점수를 계산한다.
 
@@ -184,8 +187,12 @@ def calculate_soft_scores(candidates, hard_filters, selected, brand_analysis_out
             category=category,
         )
 
-        # B 담당자의 Min-Max 정규화 함수 사용
-        scores = popup_history_scores(counts)
+        # Count data stays the same; only the preference direction is inverted.
+        if popup_history_direction not in ("frequent", "rare"):
+            raise ValueError("동종 팝업 개최 이력 선호 방향이 올바르지 않습니다.")
+        scores = popup_history_scores(
+            counts, reverse=popup_history_direction == "rare"
+        )
 
         # 공간별 점수 저장
         for space_id, score in zip(scores_by_space, scores):

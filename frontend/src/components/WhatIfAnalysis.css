@@ -1285,3 +1285,127 @@
   color: #8b95a8;
   font-size: 10px;
 }
+
+
+/* ============================================================
+   16. 동종 팝업 개최 이력 — What-if 선호 방향 선택
+   기존 가중치/순위 조정 UI는 그대로 유지
+============================================================ */
+
+.whatif-popup-history-direction {
+  margin-top: 3px;
+  padding: 11px;
+  border: 1px solid #e4e0ff;
+  border-radius: 10px;
+  background: #f8f7ff;
+  min-width: 0;
+}
+
+.whatif-popup-history-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 9px;
+}
+
+.whatif-popup-history-title strong {
+  font-size: 11px;
+  font-weight: 800;
+  color: #4e47be;
+}
+
+.whatif-popup-history-title span {
+  font-size: 10px;
+  color: #888dab;
+  line-height: 1.5;
+}
+
+.whatif-popup-history-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.whatif-popup-history-option {
+  display: flex;
+  min-width: 0;
+  min-height: 37px;
+  align-items: center;
+  border: 1px solid #dcdcf0;
+  border-radius: 8px;
+  background: #ffffff;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.whatif-popup-history-option.is-selected {
+  border-color: #7068f1;
+  background: #eeecff;
+}
+
+.whatif-popup-history-select {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 4px 8px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #59617e;
+  text-align: left;
+  word-break: keep-all;
+  cursor: pointer;
+}
+
+.whatif-popup-history-option.is-selected .whatif-popup-history-select {
+  color: #5149d7;
+}
+
+.whatif-popup-history-radio {
+  display: inline-block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid #bbb9d7;
+  background: #ffffff;
+}
+
+.whatif-popup-history-option.is-selected .whatif-popup-history-radio {
+  border: 4px solid #6a63e9;
+}
+
+.whatif-popup-history-info {
+  display: grid;
+  flex: none;
+  place-items: center;
+  align-self: stretch;
+  min-width: 27px;
+  padding: 0 5px;
+  border: 0;
+  background: transparent;
+  color: #8984d5;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.whatif-popup-history-info:hover,
+.whatif-popup-history-info[aria-expanded="true"] {
+  color: #5d55df;
+}
+
+.whatif-popup-history-help {
+  margin: 9px 0 0;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #646d88;
+  font-size: 11px;
+  line-height: 1.65;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}

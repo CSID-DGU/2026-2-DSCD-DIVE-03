@@ -43,7 +43,19 @@ def test_named_factors_use_backend_official_labels():
         "타깃 고객 비율", "대관료 적합도", "브랜드-공간 분위기 일치도"]
     assert [row["csr_weight_percent"] for row in rows] == [45, 30, 25]
     assert result["top_csr_weight_factors"] == [rows[0]]
-    assert not any(factor in json.dumps(result, ensure_ascii=False) for factor in FACTOR_LABELS)
+    # 사용자에게 표시할 평가요소 명칭만 검사
+    display_names = [
+        row["name"]
+        for row in result["factors_in_csr_weight_order"]
+    ]
+
+    assert all(name in FACTOR_LABELS.values() for name in display_names)
+
+    assert not any(
+        code in name
+        for name in display_names
+        for code in FACTOR_LABELS
+    )
 
 
 def test_exact_registered_price_and_score_difference():

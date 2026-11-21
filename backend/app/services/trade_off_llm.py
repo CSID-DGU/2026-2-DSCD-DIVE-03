@@ -112,6 +112,13 @@ def _facts(result: dict) -> dict:
         "area_gap_pyeong": area_gap,
         "same_nearest_station": station_a if same_station else None,
         "factors_in_csr_weight_order": rows,
+        "popup_history_direction": result.get("popup_history_direction", "frequent"),
+        "popup_history_score_meaning": (
+            "동일 카테고리의 개최 건수가 적을수록 높은 적합도 점수로 계산했습니다. "
+            "점수가 높다고 개최 건수가 많다는 뜻은 아닙니다."
+            if result.get("popup_history_direction") == "rare"
+            else "동일 카테고리의 개최 건수가 많을수록 높은 적합도 점수로 계산했습니다."
+        ),
         "top_csr_weight_factors": top,
         "similar_factor_scores_within_0_1_points": similar,
         "main_differentiating_factors_by_weighted_gap": divergent[:3],
