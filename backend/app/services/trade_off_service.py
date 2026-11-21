@@ -26,7 +26,7 @@ def _rounded(value: float) -> float:
     return round(float(value), 4)
 
 
-def _main_arguments(space, rival, comparisons):
+def _main_arguments(space, rival, comparisons, popup_history_direction="frequent"):
     space_id, rival_id = space["space_id"], rival["space_id"]
     differences = [
         (
@@ -41,9 +41,12 @@ def _main_arguments(space, rival, comparisons):
 
     def describe(item, positive):
         factor, score_delta, contribution_delta = item
+        label = FACTOR_LABELS.get(factor, factor)
+        if factor == "popup_history":
+            label += " (적게 개최된 지역 선호)" if popup_history_direction == "rare" else " (많이 개최된 지역 선호)"
         verb = "높음" if positive else "낮음"
         return (
-            f"{FACTOR_LABELS.get(factor, factor)} 적합도가 상대 공간보다 "
+            f"{label} 적합도가 상대 공간보다 "
             f"{abs(score_delta):.1f}점 {verb} "
             f"(가중 기여도 차이 {abs(contribution_delta):.1f}점)"
         )
@@ -117,8 +120,9 @@ def compare_recommendations(recommendation: dict, space_ids: list[str]) -> dict:
     if abs(sum(item["contributions"][b["space_id"]] for item in factor_comparison) - b_final) > 0.02:
         raise ValueError("공간 B의 종합점수와 기여도 합계가 일치하지 않습니다.")
 
-    a_arguments = _main_arguments(a, b, factor_comparison)
-    b_arguments = _main_arguments(b, a, factor_comparison)
+    popup_history_direction = recommendation.get("popup_history_direction", "frequent")
+    a_arguments = _main_arguments(a, b, factor_comparison, popup_history_direction)
+    b_arguments = _main_arguments(b, a, factor_comparison, popup_history_direction)
     ranked_factors = sorted(factor_comparison, key=lambda row: abs(row["contribution_difference"]), reverse=True)
     biggest = ranked_factors[0]
     leader = a if a_final > b_final else b if b_final > a_final else None
@@ -142,6 +146,7 @@ def compare_recommendations(recommendation: dict, space_ids: list[str]) -> dict:
     ]
     return {
         "recommendation_id": recommendation["recommendation_id"],
+        "popup_history_direction": popup_history_direction,
         "spaces": displayed,
         "weights": weights,
         "factor_comparison": factor_comparison,

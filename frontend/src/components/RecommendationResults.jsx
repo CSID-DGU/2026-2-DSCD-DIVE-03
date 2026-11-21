@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createRecommendation } from '../services/recommendations';
 import { FACTOR_LABELS } from '../mocks/recommendations';
+import { historyDirectionLabel } from '../services/popupHistoryDirection';
 import KakaoMap from './KakaoMap';
 import './RecommendationResults.css';
 
@@ -120,7 +121,7 @@ function DemoMap({ spaces, selectedId, onSelect }) {
   );
 }
 
-function FactorBreakdown({ space, weights, selected }) {
+function FactorBreakdown({ space, weights, selected, popupHistoryDirection = 'frequent' }) {
   return (
     <div className="result-factor-list">
       {selected.map((id) => {
@@ -129,7 +130,7 @@ function FactorBreakdown({ space, weights, selected }) {
         return (
           <div className="result-factor-row" key={id}>
             <div className="result-factor-top">
-              <strong>{FACTOR_LABELS[id] || id}</strong>
+              <strong>{id === 'popup_history' ? `동종 팝업 개최 이력 (${historyDirectionLabel(popupHistoryDirection)})` : (FACTOR_LABELS[id] || id)}</strong>
               <span><b>{Number(score).toFixed(1)}</b>점</span>
             </div>
             <div className="result-factor-track"><div style={{ width: `${Math.max(0, Math.min(100, Number(score)))}%` }}/></div>
@@ -141,7 +142,7 @@ function FactorBreakdown({ space, weights, selected }) {
   );
 }
 
-function SpaceDetail({ space, weights, selected, onCompare, compared, compareDisabled }) {
+function SpaceDetail({ space, weights, selected, onCompare, compared, compareDisabled, popupHistoryDirection = 'frequent' }) {
   // Kakao 공식 지도 URL 패턴: /link/map/이름,위도,경도
   const mapLink = Number.isFinite(space.latitude) && Number.isFinite(space.longitude)
     ? `https://map.kakao.com/link/map/${encodeURIComponent(space.name)},${space.latitude},${space.longitude}` : null;
@@ -164,7 +165,7 @@ function SpaceDetail({ space, weights, selected, onCompare, compared, compareDis
       </div>
       </div>
       <div className="result-detail-section-title"><h3>평가요소별 적합도</h3><span>0–100점</span></div>
-      <FactorBreakdown space={space} weights={weights} selected={selected}/>
+      <FactorBreakdown space={space} weights={weights} selected={selected} popupHistoryDirection={popupHistoryDirection}/>
       <div className="result-ai-summary"><span>추천 근거 요약</span><p>{space.summary}</p></div>
       <div className="result-detail-links">
         <button type="button" className={compared ? 'result-detail-compare is-compared' : 'result-detail-compare'} onClick={onCompare} disabled={!compared && compareDisabled}>
@@ -236,6 +237,7 @@ export default function RecommendationResults({ filters, softFilters, onEditCond
   const spaces = result?.recommendations || [];
   const selectedSpace = spaces.find((space) => space.space_id === selectedSpaceId) || spaces[0];
   const selectedFactors = result?.soft_filters?.selected || softFilters.selected || [];
+  const popupHistoryDirection = result?.popup_history_direction || result?.soft_filters?.popup_history_direction || softFilters.popup_history_direction || 'frequent';
   const toggleCompare = (id) => {
     const next = compareIds.includes(id)
       ? compareIds.filter((x) => x !== id)
@@ -306,7 +308,7 @@ export default function RecommendationResults({ filters, softFilters, onEditCond
               <KakaoMap spaces={spaces} selectedId={selectedSpace.space_id} onSelect={setSelectedSpaceId} fallback={<DemoMap spaces={spaces} selectedId={selectedSpace.space_id} onSelect={setSelectedSpaceId}/>} />
               <div className="result-map-selected"><span className="result-pin-dot"/><div><strong>{selectedSpace.name}</strong><small>{selectedSpace.address}</small></div><span>{selectedSpace.final_score.toFixed(1)}점</span></div>
             </section>
-            <SpaceDetail space={selectedSpace} weights={result.weights} selected={selectedFactors} onCompare={() => toggleCompare(selectedSpace.space_id)} compared={compareIds.includes(selectedSpace.space_id)} compareDisabled={compareIds.length >= 2}/>
+            <SpaceDetail space={selectedSpace} weights={result.weights} selected={selectedFactors} popupHistoryDirection={popupHistoryDirection} onCompare={() => toggleCompare(selectedSpace.space_id)} compared={compareIds.includes(selectedSpace.space_id)} compareDisabled={compareIds.length >= 2}/>
           </div>
           <section className="result-whatif-cta"><div><strong>AI 의사결정 도우미 · What-if 분석</strong><p>예산·지역·면적·추천 기준을 변경하면 후보가 어떻게 달라지는지 비교할 수 있어요.</p></div><button type="button" onClick={() => onOpenWhatIf(result)}>조건 변경 분석하기 →</button></section>
           <section className="result-compare-bar" aria-label="Trade-off 비교 후보 선택">

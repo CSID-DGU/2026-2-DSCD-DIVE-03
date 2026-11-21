@@ -45,7 +45,7 @@ export function getDemoWeights(selected = [], gaps = []) {
 
 const targetShare = (space, selectedTargets) => selectedTargets.reduce((total, key) => total + (Number(space.ratios?.[key]) || 0), 0);
 
-function demoFactorScore(id, space, filters, targetStats) {
+function demoFactorScore(id, space, filters, targetStats, popupHistoryDirection = 'frequent') {
   const seed = stableHash(`${id}:${space.space_id}:${filters.category_id || ''}:${filters.brand_url || ''}`);
   if (id === 'target_ratio') {
     const share = targetShare(space, filters.target_customers || []);
@@ -54,7 +54,10 @@ function demoFactorScore(id, space, filters, targetStats) {
     return round(range > 0.00001 ? clamp(45 + 53 * (share - targetStats.min) / range) : 70);
   }
   if (id === 'brand_space_fit') return 55 + seed % 43; // NLI 모델 미연결: 재현 가능한 시연 값
-  if (id === 'popup_history') return 48 + seed % 49; // 팝업 DB 미연결: 재현 가능한 시연 값
+  if (id === 'popup_history') { // Mock only: illustrative, NOT actual history counts
+    const base = 48 + seed % 49;
+    return popupHistoryDirection === 'rare' ? 100 - base : base;
+  }
   if (id === 'subway_accessibility') return round(clamp(100 / (1 + Number(space.station_distance_m || 0) / 420)));
   if (id === 'rental_price_fit') return round(clamp(100 * (1 - space.price_krw / Number(filters.max_budget_krw || 1))));
   if (id === 'area_fit') {
@@ -90,7 +93,7 @@ export function getMockRecommendation(request) {
   const shares = candidates.map((space) => targetShare(space, filters.target_customers || []));
   const targetStats = { min: shares.length ? Math.min(...shares) : 0, max: shares.length ? Math.max(...shares) : 0 };
   const scored = candidates.map((space) => {
-    const factor_scores = Object.fromEntries(selected.map((key) => [key, demoFactorScore(key, space, filters, targetStats)]));
+    const factor_scores = Object.fromEntries(selected.map((key) => [key, demoFactorScore(key, space, filters, targetStats, soft.popup_history_direction || 'frequent')]));
     const contributions = Object.fromEntries(selected.map((key) => [key, round(factor_scores[key] * weights[key], 3)]));
     const final_score = round(Object.values(contributions).reduce((a, b) => a + b, 0));
     return {
@@ -105,6 +108,7 @@ export function getMockRecommendation(request) {
     total_candidates: recommendations.length,
     hard_filters: filters,
     soft_filters: soft,
+    popup_history_direction: soft.popup_history_direction || 'frequent',
     weights,
     recommendations,
     mock_meta: {

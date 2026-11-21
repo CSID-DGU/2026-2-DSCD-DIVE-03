@@ -71,12 +71,17 @@ def target_ratio_scores(
     return _min_max(totals, zero_tie_score=0.0)
 
 
-def popup_history_scores(counts: Sequence[int]) -> list[float]:
-    """Normalize past same-category, same-district counts in candidate order."""
+def popup_history_scores(counts: Sequence[int], *, reverse: bool = False) -> list[float]:
+    """Normalize past same-category, same-district counts; reverse for rarity.
+
+    A zero-count tie retains the original frequent score 0.0; reverse mode
+    returns 1.0 for every candidate in that tie (there is no rank advantage).
+    """
     if any(type(count) is not int or count < 0 for count in counts):
         raise ValueError("Popup history counts must be non-negative integers.")
 
-    return _min_max(counts, zero_tie_score=0.0)
+    normal = _min_max(counts, zero_tie_score=0.0)
+    return [1.0 - score for score in normal] if reverse else normal
 
 
 def area_fit_penalties(

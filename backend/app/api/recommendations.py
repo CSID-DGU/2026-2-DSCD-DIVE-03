@@ -56,6 +56,7 @@ def run_recommendation(request: RecommendationRequest):
         hard,
         soft.selected,
         brand_analysis_out=brand_analysis,
+        popup_history_direction=soft.popup_history_direction,
     )
 
     # 5. 사용자가 지정한 중요도 순위와 차이로 CSR 가중치 계산
@@ -143,6 +144,7 @@ def run_recommendation(request: RecommendationRequest):
         "soft_filters": soft.model_dump(mode="json"),
         "hard_filter_count_before_availability": hard_filter_count,
         "weights": weights,
+        "popup_history_direction": soft.popup_history_direction,
         "recommendations": recommendations,
         "brand_analysis": brand_analysis or None,
     }

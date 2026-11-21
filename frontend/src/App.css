@@ -248,3 +248,21 @@ h1, h2, h3, p { margin-top: 0; }
   .criteria-navigation .secondary-button { flex-basis: 120px; font-size: 11px; padding: 9px; }
   .criteria-navigation .primary-button { font-size: 12px; min-height: 49px; }
 }
+
+/* Popup-history direction: one factor, two mutually exclusive preferences. */
+.history-direction { margin-top: 12px; max-width: 100%; }
+.history-direction-title { display: block; margin: 0 0 9px; color: #4e5674; font-size: 12px; font-weight: 750; }
+.history-direction-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.history-direction-option { display: flex; align-items: center; min-width: 0; gap: 4px; padding: 8px 7px; border: 1px solid #e3e6f2; border-radius: 9px; background: #fff; }
+.history-direction-option.is-active { border-color: #7772f1; background: #f2f1ff; box-shadow: inset 0 0 0 1px #e0deff; }
+.history-direction-label { display: flex; flex: 1; min-width: 0; gap: 6px; align-items: flex-start; cursor: pointer; }
+.history-direction-label input { margin: 2px 0 0; accent-color: #6965ea; flex: none; }
+.history-direction-label span { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.history-direction-label strong { color: #3f4770; font-size: 11px; font-weight: 750; line-height: 1.45; word-break: keep-all; overflow-wrap: break-word; }
+.history-direction-label small { color: #8793a8; font-size: 10px; line-height: 1.4; word-break: keep-all; }
+.history-direction-info { align-self: flex-start; flex: none; font-size: 15px; line-height: 1; padding: 2px; border: none; background: transparent; color: #7773df; cursor: pointer; }
+.history-direction-detail { padding: 10px 12px; margin: 8px 0 0; border: 1px solid #e3e1ff; border-radius: 8px; background: #f5f4ff; color: #52607e; font-size: 11px; line-height: 1.7; word-break: keep-all; overflow-wrap: break-word; }
+.history-direction-hint { display: block; padding-top: 7px; color: #8490a5; font-size: 10px; line-height: 1.5; word-break: keep-all; }
+@media (max-width: 1020px) { .history-direction-options { grid-template-columns: 1fr; } }
+@media (max-width: 690px) { .history-direction-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .history-direction-options { grid-template-columns: 1fr; } }
