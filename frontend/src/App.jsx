@@ -3,6 +3,8 @@ import './App.css';
 import RecommendationResults from './components/RecommendationResults';
 import WhatIfAnalysis from './components/WhatIfAnalysis';
 import TradeOffAnalysis from './components/TradeOffAnalysis';
+import BenchmarkOverview from './pages/BenchmarkOverview';
+import BenchmarkDistrict from './pages/BenchmarkDistrict';
 
 // 최종 CSV 확인(2026-11-06): 공간 983개 / 팝업 6,383개.
 // region_ids와 category_id에는 임시 영문 ID 대신 CSV의 실제 한글 분류값을 저장합니다.
@@ -641,6 +643,9 @@ function App() {
   const [softFilters, setSoftFilters] = useState(null);
   const [previousEligibility, setPreviousEligibility] = useState({});
   const [currentStep, setCurrentStep] = useState(1);
+  const [activeSection, setActiveSection] = useState('recommendation');
+  const [benchmarkRegion, setBenchmarkRegion] = useState('전체');
+  const [benchmarkPage, setBenchmarkPage] = useState('overview');
 
   // STEP 03의 추천 결과를 보관합니다. STEP 04에서 뒤로 가더라도 기존 결과가 유지됩니다.
   const [recommendationSnapshot, setRecommendationSnapshot] = useState(null);
@@ -746,10 +751,34 @@ function App() {
       <header className="topbar">
         <div className="topbar-inner">
           <div className="brand"><span className="brand-mark">P</span><span>POPCAST</span></div>
-          <nav className="top-nav" aria-label="상단 메뉴"><span className="nav-link is-current">공간 추천</span><span className="nav-link is-muted" title="추후 구현 예정">팝업 현황</span></nav>
+          <nav className="top-nav" aria-label="상단 메뉴">
+            <button type="button" className={`nav-link ${activeSection === 'recommendation' ? 'is-current' : ''}`} onClick={() => setActiveSection('recommendation')}>공간 추천</button>
+            <button type="button" className={`nav-link ${activeSection === 'benchmark' ? 'is-current' : ''}`} onClick={() => { setActiveSection('benchmark'); setBenchmarkPage('overview'); }}>팝업 벤치마크</button>
+          </nav>
         </div>
       </header>
 
+      {activeSection === 'benchmark' ? (
+        <main className="benchmark-page-content">
+          {benchmarkPage === 'overview' ? (
+            <BenchmarkOverview
+              selectedRegion={benchmarkRegion}
+              onSelectRegion={setBenchmarkRegion}
+              onOpenDistrict={(region) => {
+                if (region === '기타') return;
+                setBenchmarkRegion(region);
+                setBenchmarkPage('district');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          ) : (
+            <BenchmarkDistrict
+              region={benchmarkRegion}
+              onBack={() => { setBenchmarkPage('overview'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            />
+          )}
+        </main>
+      ) : (
       <main className={`page-content ${currentStep === 3 ? 'page-content-results' : currentStep === 4 ? 'page-content-whatif' : currentStep === 5 ? 'page-content-tradeoff' : ''}`}>
         {currentStep < 3 && (currentStep === 1 ? (
           <div className="hero-heading">
@@ -805,6 +834,7 @@ function App() {
           />
         )}
       </main>
+      )}
     </div>
   );
 }

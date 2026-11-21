@@ -248,3 +248,10 @@ h1, h2, h3, p { margin-top: 0; }
   .criteria-navigation .secondary-button { flex-basis: 120px; font-size: 11px; padding: 9px; }
   .criteria-navigation .primary-button { font-size: 12px; min-height: 49px; }
 }
+
+/* Benchmark navigation additions (isolated from recommendation steps) */
+.top-nav button.nav-link { border: 0; background: transparent; font: inherit; padding: 0; cursor: pointer; color: #737d8d; }
+.top-nav button.nav-link.is-current { color: #5e5be5; }
+.top-nav button.nav-link:hover { color: #5e5be5; }
+.benchmark-page-content { width: min(100% - 48px, 1280px); margin: 0 auto; padding: 32px 0 60px; }
+@media (max-width: 580px) { .benchmark-page-content { width: min(100% - 24px, 480px); padding-top: 22px; } }
