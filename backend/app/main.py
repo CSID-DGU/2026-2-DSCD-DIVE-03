@@ -3,12 +3,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.recommendations import router as recommendations_router
-<<<<<<< HEAD
 from app.api.what_if import router as what_if_router
-=======
 from app.api.trade_off import router as trade_off_router
->>>>>>> origin/dev
-
+from app.api.benchmark import router as benchmark_router
 
 app = FastAPI(
     title="POPCAST API",
@@ -34,3 +31,6 @@ app.include_router(trade_off_router)
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+# 벤치마크 API 등록
+app.include_router(benchmark_router)
