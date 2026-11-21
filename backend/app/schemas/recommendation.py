@@ -2,6 +2,8 @@
 from datetime import date
 from math import isclose, isfinite
 
+from typing import Literal
+
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -67,6 +69,9 @@ class HardFilters(BaseModel):
 
 
 class SoftFilters(BaseModel):
+    # Same factor ID; only the preferred direction changes.
+    popup_history_direction: Literal["frequent", "rare"] = "frequent"
+
     # 선택한 평가요소 (중요도 높은 순서)
     selected: list[str] = Field(min_length=1)
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FACTOR_LABELS } from '../mocks/recommendations';
+import { historyDirectionLabel } from '../services/popupHistoryDirection';
 import { createTradeOffAnalysis } from '../services/tradeOff';
 import { splitTradeOffNarrative } from '../services/tradeOffNarrative';
 import './TradeOffAnalysis.css';
@@ -60,7 +61,7 @@ function SpacePanel({ space, badge, leader, scoreDifference }) {
   );
 }
 
-function FactorRow({ entry, a, b, weights }) {
+function FactorRow({ entry, a, b, weights, popupHistoryDirection = 'frequent' }) {
   const aScore = Number(entry.scores?.[a.space_id] ?? a.factor_scores?.[entry.factor] ?? 0);
   const bScore = Number(entry.scores?.[b.space_id] ?? b.factor_scores?.[entry.factor] ?? 0);
   const weight = Number(weights?.[entry.factor] || 0);
@@ -74,7 +75,7 @@ function FactorRow({ entry, a, b, weights }) {
         <div className="tradeoff-factor-track"><span style={{ width: `${safeScore(aScore)}%` }} /></div>
       </div>
       <div className="tradeoff-factor-middle">
-        <strong>{factorTitle(entry.factor)}</strong>
+        <strong>{entry.factor === 'popup_history' ? `${factorTitle(entry.factor)} (${historyDirectionLabel(popupHistoryDirection)})` : factorTitle(entry.factor)}</strong>
         <span>가중치 {formatWeight(weight)}</span>
         <small>{winner === null ? '동점' : winner === a.space_id ? '공간 A 우위' : '공간 B 우위'}</small>
       </div>
@@ -127,6 +128,7 @@ export default function TradeOffAnalysis({ baseline, spaceIds, onBack }) {
     return { ...original, ...item };
   }) || [];
   const [a, b] = spaces;
+  const popupHistoryDirection = analysis?.popup_history_direction || baseline?.popup_history_direction || baseline?.soft_filters?.popup_history_direction || 'frequent';
   const aFinal = Number(a?.final_score || 0);
   const bFinal = Number(b?.final_score || 0);
   const gap = Math.abs(Number(analysis?.score_comparison?.difference ?? Math.abs(aFinal - bFinal)));
@@ -158,7 +160,7 @@ export default function TradeOffAnalysis({ baseline, spaceIds, onBack }) {
           <section className="tradeoff-panel" aria-labelledby="tradeoff-factor-title">
             <div className="tradeoff-panel-title"><div><span>01 · 점수 비교</span><h2 id="tradeoff-factor-title">평가요소별 적합도 및 가중 기여도</h2><p>두 공간의 동일 평가요소를 100점 만점으로 비교해요. 선택한 평가요소만 나타납니다.</p></div><span className="tradeoff-factor-count">{analysis.factor_comparison?.length || 0}개 평가요소</span></div>
             <div className="tradeoff-factor-header"><b>공간 A · {a.name}</b><span>평가요소</span><b>공간 B · {b.name}</b></div>
-            {analysis.factor_comparison?.length ? analysis.factor_comparison.map((entry) => <FactorRow key={entry.factor} entry={entry} a={a} b={b} weights={analysis.weights}/>) : <p className="tradeoff-no-factors">비교할 평가요소가 없어요.</p>}
+            {analysis.factor_comparison?.length ? analysis.factor_comparison.map((entry) => <FactorRow key={entry.factor} entry={entry} a={a} b={b} weights={analysis.weights} popupHistoryDirection={popupHistoryDirection}/>) : <p className="tradeoff-no-factors">비교할 평가요소가 없어요.</p>}
             <p className="tradeoff-footnote">* 적합도 점수는 0~100점이며, 기여도는 적합도 점수 × 선택한 가중치입니다. {mock ? 'Mock 추천 점수를 사용합니다.' : '실제 추천 엔진에서 반환된 점수입니다.'}</p>
           </section>
           <section className="tradeoff-panel" aria-labelledby="tradeoff-pros-title">

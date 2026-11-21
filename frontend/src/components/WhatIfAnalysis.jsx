@@ -91,6 +91,7 @@ const copyHard = (hard = {}) => ({
 });
 
 const copySoft = (soft = {}) => ({
+  popup_history_direction: soft.popup_history_direction || 'frequent',
   selected: [...(soft.selected || [])],
   importance_gaps: [...(soft.importance_gaps || [])],
 });
@@ -120,7 +121,10 @@ const isEligible = (id, hard) => {
 
 function makePayload(baseline, hard, soft) {
   const baseHard = baseline.hard_filters || {};
-  const baseSoft = baseline.soft_filters || {};
+  // 선호 방향이 없는 이전 추천 결과도 기본값(frequent)으로 비교합니다.
+  // 방향만 변경해도 modified_soft_filters가 생성되며,
+  // 처음 화면에 진입했다고 무조건 변경된 것으로 처리되지 않습니다.
+  const baseSoft = copySoft(baseline.soft_filters || {});
   const changedHard = {};
 
   for (const [key, value] of Object.entries(hard)) {
@@ -1085,6 +1089,7 @@ export default function WhatIfAnalysis({
   );
 
   const [mode, setMode] = useState('conditions');
+  const [popupHistoryHelp, setPopupHistoryHelp] = useState(null);
   const [scenario, setScenario] = useState(null);
   const [spaceSummaries, setSpaceSummaries] = useState({});
   const [spaceLLMLoading, setSpaceLLMLoading] = useState(false);
@@ -1139,6 +1144,7 @@ export default function WhatIfAnalysis({
       const selected = [...kept, ...auto];
 
       return {
+        ...previous,
         selected,
         importance_gaps: normalizeGaps(
           selected,
@@ -1179,6 +1185,7 @@ export default function WhatIfAnalysis({
       : [...soft.selected, id];
 
     setSoft({
+      ...soft,
       selected,
       importance_gaps: normalizeGaps(
         selected,
@@ -1222,6 +1229,22 @@ export default function WhatIfAnalysis({
       ),
     }));
 
+    setScenario(null);
+    setSelectedSpaceId(null);
+    setError('');
+  };
+
+  // 개최 이력의 평가 방향만 변경해도 What-if 분석 대상으로 인식합니다.
+  // 나머지 Soft Filter 및 CSR 순위/중요도 차이는 그대로 유지합니다.
+  const changePopupHistoryDirection = (direction) => {
+    if (!['frequent', 'rare'].includes(direction)) return;
+    if (!soft.selected.includes('popup_history')) return;
+    if (soft.popup_history_direction === direction) return;
+
+    setSoft((previous) => ({
+      ...previous,
+      popup_history_direction: direction,
+    }));
     setScenario(null);
     setSelectedSpaceId(null);
     setError('');
@@ -1781,6 +1804,79 @@ useEffect(() => {
                               </option>
                             ))}
                           </select>
+                        )}
+                      </div>
+                    )}
+
+                    {id === 'popup_history' && active && eligible && (
+                      <div
+                        className="whatif-popup-history-direction"
+                        role="group"
+                        aria-label="동종 팝업 개최 이력 선호 방향"
+                      >
+                        <div className="whatif-popup-history-title">
+                          <strong>개최 빈도 선호 방향</strong>
+                          <span>두 방향 중 하나를 선택하세요.</span>
+                        </div>
+
+                        <div className="whatif-popup-history-options">
+                          {[
+                            {
+                              value: 'frequent',
+                              label: '많이 개최',
+                              detail: '유사 업종의 기존 입지 선택 경향을 간접적으로 참고하고 싶을 때 선택해요.',
+                            },
+                            {
+                              value: 'rare',
+                              label: '적게 개최',
+                              detail: '동종 팝업 개최 사례가 상대적으로 드문 지역에서 차별성과 희소성을 고려하고 싶을 때 선택해요.',
+                            },
+                          ].map((option) => (
+                            <div
+                              className={`whatif-popup-history-option ${
+                                soft.popup_history_direction === option.value
+                                  ? 'is-selected'
+                                  : ''
+                              }`}
+                              key={option.value}
+                            >
+                              <button
+                                type="button"
+                                className="whatif-popup-history-select"
+                                aria-pressed={
+                                  soft.popup_history_direction === option.value
+                                }
+                                onClick={() =>
+                                  changePopupHistoryDirection(option.value)
+                                }
+                              >
+                                <span className="whatif-popup-history-radio" aria-hidden="true" />
+                                {option.label}
+                              </button>
+
+                              <button
+                                type="button"
+                                className="whatif-popup-history-info"
+                                aria-label={`${option.label} 설명 보기`}
+                                aria-expanded={popupHistoryHelp === option.value}
+                                onClick={() =>
+                                  setPopupHistoryHelp((prev) =>
+                                    prev === option.value ? null : option.value
+                                  )
+                                }
+                              >
+                                ⓘ
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {popupHistoryHelp && (
+                          <p className="whatif-popup-history-help" role="status">
+                            {popupHistoryHelp === 'frequent'
+                              ? '유사 업종의 기존 입지 선택 경향을 간접적으로 참고하고 싶을 때 선택해요.'
+                              : '동종 팝업 개최 사례가 상대적으로 드문 지역에서 차별성과 희소성을 고려하고 싶을 때 선택해요.'}
+                          </p>
                         )}
                       </div>
                     )}
