@@ -40,3 +40,11 @@ export function getBenchmarkDistricts(region, { startDate, endDate, asOf, signal
     region, start_date: startDate, end_date: endDate, as_of: asOf,
   }, signal);
 }
+
+
+// Commit 4: 실제 위경도 기반 위치 밀집도 API
+export function getBenchmarkMapPoints({ region = '전체', district = '전체', startDate, endDate, asOf, signal } = {}) {
+  return requestBenchmark('map-points', {
+    region, district, start_date: startDate, end_date: endDate, as_of: asOf,
+  }, signal);
+}

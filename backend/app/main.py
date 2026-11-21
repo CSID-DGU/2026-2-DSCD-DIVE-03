@@ -6,6 +6,7 @@ from app.api.recommendations import router as recommendations_router
 from app.api.what_if import router as what_if_router
 from app.api.trade_off import router as trade_off_router
 from app.api.benchmark import router as benchmark_router
+from app.api.benchmark_map import router as benchmark_map_router
 
 app = FastAPI(
     title="POPCAST API",
@@ -34,3 +35,6 @@ def health_check():
 
 # 벤치마크 API 등록
 app.include_router(benchmark_router)
+
+# 벤치마크 지도 API 등록
+app.include_router(benchmark_map_router)

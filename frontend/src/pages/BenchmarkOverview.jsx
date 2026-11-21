@@ -1,3 +1,4 @@
+import BenchmarkGeoMap from './BenchmarkGeoMap';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getBenchmarkRegions } from '../services/benchmark';
 import { BenchmarkStatus, KPI, CategoryBars, MonthlyLine, numberLabel, percentLabel, priceLabel } from './BenchmarkCharts';
@@ -63,8 +64,8 @@ export default function BenchmarkOverview({ selectedRegion, onSelectRegion, onOp
       <section className="benchmark-overview-grid">
         <div className="benchmark-panel benchmark-map-placeholder">
           <h2>서울 7개 권역 팝업 현황</h2>
-          <p>권역별 개최 현황 지도 (경계 지도는 다음 단계에서 연결)</p>
-          <div className="benchmark-placeholder">지도 · 권역 경계 연동 예정</div>
+          <p>실제 팝업 개최 좌표의 위치 분포도입니다. 권역별 경계선은 표시하지 않습니다.</p>
+          <BenchmarkGeoMap region={region} showRegionCenters onSelectRegion={onSelectRegion} />
           <div className="benchmark-region-totals">
             {(data?.regions || []).map(item => <button key={item.region} className={`benchmark-region-total ${region === item.region ? 'is-active' : ''}`} onClick={() => onSelectRegion(item.region)} type="button"><span>{item.region}</span><strong>{numberLabel(item.popup_count, '건')}</strong></button>)}
           </div>

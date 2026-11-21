@@ -1,3 +1,4 @@
+import BenchmarkGeoMap from './BenchmarkGeoMap';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getBenchmarkDistricts } from '../services/benchmark';
 import { BenchmarkStatus, KPI, CategoryDonut, DistrictBars, MonthlyLine, numberLabel, percentLabel } from './BenchmarkCharts';
@@ -43,7 +44,7 @@ export default function BenchmarkDistrict({ region, onBack }) {
     <BenchmarkStatus loading={loading} error={error} onRetry={retry}>
       <section className="benchmark-district-kpis">{kpis.map(([label, value, footnote]) => <div className="benchmark-panel" key={label}><KPI label={label} value={value} footnote={footnote}/></div>)}</section>
       <section className="benchmark-district-grid">
-        <div className="benchmark-panel"><h2>행정동별 팝업 분포</h2><p className="benchmark-subtext">행정동 경계 지도는 다음 단계에서 연결합니다.</p><div className="benchmark-placeholder tall">행정동 경계 지도 · 연동 예정</div></div>
+        <div className="benchmark-panel"><h2>행정동별 팝업 분포</h2><p className="benchmark-subtext">점 클릭으로 행정동을 선택할 수 있습니다. 행정동 경계선은 표시하지 않습니다.</p><BenchmarkGeoMap region={region} district={dong} onSelectDistrict={setDong} /></div>
         <div className="benchmark-district-middle">
           <div className="benchmark-panel"><h2>행정동별 팝업 개최 건수</h2><DistrictBars districts={data?.districts} metric="popup_count" selectedDistrict={dong} onSelectDistrict={setDong}/></div>
           <div className="benchmark-panel"><h2>팝업 카테고리 비중 {dong !== '전체' ? `(${dong})` : ''}</h2><CategoryDonut data={summary?.category_counts} total={summary?.popup_count}/></div>
