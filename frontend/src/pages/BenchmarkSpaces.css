@@ -1,0 +1,28 @@
+/* Commit 5 — only benchmark space list. No styles altered in existing recommendation flows. */
+.benchmark-spaces-panel { min-width:0; }
+.benchmark-space-title { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.benchmark-space-title h2 { margin:0; font-size:15px; }
+.benchmark-space-title span { font-size:11px; padding:5px 9px; background:#f1edff; color:#654ed4; font-weight:800; border-radius:999px; white-space:nowrap; }
+.benchmark-space-disclaimer { font-size:10px!important; color:#8b90a5; line-height:1.5; margin:10px 0!important; }
+.benchmark-space-filters { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+.benchmark-space-filters label { display:flex; align-items:center; gap:5px; color:#5f617b; font-size:10px; font-weight:700; }
+.benchmark-space-filters select { max-width:155px; min-width:0; border:1px solid #dedcf3; border-radius:8px; background:#fff; color:#4b4668; padding:7px 5px; font-size:10px; }
+.benchmark-space-items { display:flex; flex-direction:column; gap:0; }
+.benchmark-space-item { display:flex; gap:10px; align-items:flex-start; min-width:0; padding:13px 0; border-top:1px solid #efebf7; }
+.benchmark-space-thumb { flex:none; width:92px; height:84px; position:relative; overflow:hidden; border-radius:10px; background:linear-gradient(135deg,#f7f4ff,#e5defb); display:grid; place-items:center; }
+.benchmark-space-thumb img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; }
+.benchmark-space-thumb-fallback { color:#a192d6; font-size:9px; font-weight:800; letter-spacing:1px; }
+.benchmark-space-details { flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
+.benchmark-space-details > strong { font-size:12px; line-height:1.35; color:#332f4b; overflow-wrap:anywhere; }
+.benchmark-space-details > small { font-size:10px; color:#8f87a3; }
+.benchmark-space-meta { display:flex; align-items:center; flex-wrap:wrap; justify-content:space-between; gap:5px; font-size:10px; color:#706883; }
+.benchmark-space-meta b { color:#6851df; background:#f4efff; border-radius:6px; padding:3px 5px; font-size:10px; }
+.benchmark-space-details a { color:#5d4be0; font-weight:800; font-size:10px; align-self:flex-start; text-decoration:none; }
+.benchmark-space-details a:hover { text-decoration:underline; }
+.benchmark-space-no-link { font-size:10px; color:#aaa5b9; }
+.benchmark-space-pager { display:flex; align-items:center; justify-content:center; gap:12px; padding:15px 0 6px; color:#706787; font-size:11px; }
+.benchmark-space-pager button,.benchmark-space-state button { border:1px solid #dcd5f8; background:white; color:#6652d4; border-radius:8px; font-weight:700; font-size:11px; padding:7px 11px; }
+.benchmark-space-pager button:disabled { opacity:.4; cursor:not-allowed; }
+.benchmark-space-state { display:flex; align-items:center; justify-content:center; flex-direction:column; gap:9px; text-align:center; padding:35px 8px; min-height:230px; font-size:12px; color:#9286ad; }
+.benchmark-space-state.is-error { color:#b05168; }
+@media(max-width:580px) { .benchmark-space-thumb { width:80px; height:74px; } }
