@@ -1,4 +1,5 @@
 import BenchmarkGeoMap from './BenchmarkGeoMap';
+import BenchmarkPopulation from './BenchmarkPopulation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getBenchmarkRegions } from '../services/benchmark';
 import { BenchmarkStatus, KPI, CategoryBars, MonthlyLine, numberLabel, percentLabel, priceLabel } from './BenchmarkCharts';
@@ -82,8 +83,8 @@ export default function BenchmarkOverview({ selectedRegion, onSelectRegion, onOp
 
       <section className="benchmark-chart-grid">
         <div className="benchmark-panel"><h2>{region === '전체' ? '서울 전체 인기 카테고리' : `${region} 인기 카테고리`}</h2><CategoryBars data={summary?.category_counts} total={summary?.popup_count} compareData={region === '전체' ? null : overall?.category_counts}/></div>
-        <div className="benchmark-panel"><h2>{region === '전체' ? '권역별 주요 생활인구' : `${region} 생활인구 구성비`}</h2>
-          <div className="benchmark-placeholder small">{region === '전체' ? '권역별 대표 성별·연령대 목록' : '성별·연령대 도넛 차트'} · 생활인구 데이터 연동 예정</div>
+        <div className="benchmark-panel"><h2>{region === '전체' ? '권역별 주요 생활인구 수' : `${region} 성별·연령별 생활인구 수`}</h2>
+          <BenchmarkPopulation region={region} />
         </div>
         <div className="benchmark-panel"><h2>월별 팝업 시즌성 {region !== '전체' ? `(${region})` : ''}</h2><MonthlyLine data={summary?.monthly_open_counts}/></div>
       </section>

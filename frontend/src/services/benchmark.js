@@ -53,3 +53,8 @@ export function getBenchmarkMapPoints({ region = '전체', district = '전체', 
 export function getBenchmarkSpaces(region, { district = '전체', minArea, maxArea, minPrice, maxPrice, page = 1, pageSize = 8, signal } = {}) {
   return requestBenchmark('spaces', { region, district, min_area: minArea, max_area: maxArea, min_price: minPrice, max_price: maxPrice, page, page_size: pageSize }, signal);
 }
+
+// Commit 6: 권역별 성별·연령대 생활인구 수(평균치 기반)
+export function getBenchmarkPopulation({ signal } = {}) {
+  return requestBenchmark('population', {}, signal);
+}
