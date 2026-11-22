@@ -14,7 +14,7 @@ from app.services.availability import filter_spaces_by_period
 from app.services.recommendation_store import get_recommendation, save_recommendation
 
 FACTOR_LABELS = {
-    'target_ratio': '타깃 고객 비율',
+    'target_ratio': '타깃 고객 규모',
     'brand_space_fit': '브랜드-공간 분위기 일치도',
     'popup_history': '동종 팝업 개최 이력',
     'subway_accessibility': '지하철 접근성',

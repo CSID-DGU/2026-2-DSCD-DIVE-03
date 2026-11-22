@@ -154,7 +154,7 @@ def run_what_if_with_llm(request):
 
     # 3-4. 변경 후 중요도 1~2순위 평가요소
     factor_labels = {
-        "target_ratio": "타깃 고객 비율",
+        "target_ratio": "타깃 고객 규모",
         "brand_space_fit": "브랜드-공간 분위기 일치도",
         "popup_history": "동종 팝업 개최 이력",
         "subway_accessibility": "지하철 접근성",
