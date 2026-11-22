@@ -1,0 +1,83 @@
+/* Benchmark district layout refresh: preserves all chart components and real APIs. */
+.benchmark-district-refresh .benchmark-hero { min-height:0; margin-bottom:16px; padding-top:2px; }
+.benchmark-district-refresh .benchmark-hero h1 { margin:8px 0 5px; }
+.benchmark-district-refresh .benchmark-filter-panel { padding:13px 18px; margin-bottom:13px; gap:13px; }
+.benchmark-district-refresh .benchmark-dong-select { margin-left:0; }
+.benchmark-district-refresh .benchmark-dong-select select { min-width:132px; padding:8px 30px 8px 11px; border-radius:10px; }
+.benchmark-district-refresh .benchmark-district-kpis { gap:12px; margin-bottom:13px; }
+.benchmark-district-refresh .benchmark-district-kpis > .benchmark-panel .benchmark-kpi { padding:16px 17px; min-height:96px; }
+.benchmark-district-refresh .benchmark-district-kpis .benchmark-kpi strong { font-size:24px; margin:9px 0 0; }
+.benchmark-district-refresh .benchmark-district-kpis .benchmark-kpi small { display:none; }
+
+/* Left analysis 2 x 2, right 5-space list. No stretched empty charts. */
+.benchmark-district-refresh .benchmark-district-workspace {
+  display:grid;
+  grid-template-columns:minmax(0,1.8fr) minmax(280px,.92fr);
+  gap:13px;
+  align-items:stretch;
+}
+.benchmark-district-refresh .benchmark-district-analytics { display:grid; grid-template-rows:auto auto; gap:13px; min-width:0; align-content:start; }
+.benchmark-district-refresh .benchmark-district-main-row,
+.benchmark-district-refresh .benchmark-district-analytics-row {
+  display:grid; grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);
+  gap:13px; align-items:stretch; min-width:0;
+}
+.benchmark-district-refresh .benchmark-district-analytics-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+.benchmark-district-refresh .benchmark-district-main-row > .benchmark-panel,
+.benchmark-district-refresh .benchmark-district-analytics-row > .benchmark-panel {
+  min-width:0; height:100%; min-height:0; padding:16px;
+}
+.benchmark-district-refresh .benchmark-panel h2 { font-size:14px; margin-bottom:12px; }
+.benchmark-district-refresh .benchmark-district-map-card .benchmark-real-map { height:305px; }
+.benchmark-district-refresh .benchmark-district-count-card .benchmark-district-bars {
+  max-height:344px; overflow-y:auto; padding-right:4px; scrollbar-width:thin;
+}
+.benchmark-district-refresh .benchmark-district-category-card .benchmark-donut-layout {
+  grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr); gap:9px; min-height:213px;
+}
+.benchmark-district-refresh .benchmark-district-category-card .benchmark-donut { width:min(100%,156px); margin:auto; }
+.benchmark-district-refresh .benchmark-district-category-card .benchmark-donut-legend { display:grid; grid-template-columns:1fr; gap:7px; }
+.benchmark-district-refresh .benchmark-district-category-card .benchmark-donut-legend > div { min-width:0; }
+.benchmark-district-refresh .benchmark-district-season-card .benchmark-line-wrap svg { max-height:210px; }
+.benchmark-district-refresh .benchmark-district-season-card .benchmark-chart-footnote { display:none; }
+
+/* Keep the space list legible without making analytics cards several hundred px taller. */
+.benchmark-district-refresh .benchmark-district-space-column {
+  min-width:0; padding:16px; align-self:stretch; display:flex; flex-direction:column;
+}
+.benchmark-district-refresh .benchmark-district-space-column .benchmark-space-list {
+  height:100%; display:flex; flex-direction:column; min-height:0;
+}
+.benchmark-district-refresh .benchmark-district-space-column .benchmark-space-items {
+  flex:1; min-height:0; max-height:570px; overflow-y:auto; scrollbar-width:thin; padding-right:3px;
+}
+.benchmark-district-refresh .benchmark-district-space-column .benchmark-space-item {
+  min-height:100px; padding:10px 0; align-items:center;
+}
+.benchmark-district-refresh .benchmark-district-space-column .benchmark-space-thumb { width:82px; height:75px; }
+.benchmark-district-refresh .benchmark-district-space-column .benchmark-space-title h2 { margin:0; }
+.benchmark-district-refresh .benchmark-district-space-column .benchmark-space-disclaimer { margin:8px 0 12px!important; }
+.benchmark-district-refresh .benchmark-district-space-column .benchmark-space-pager { margin-top:auto; padding-top:12px; border-top:1px solid #f0edfa; }
+
+/* Space counts moved below workspace and span its entire width (no orphaned card). */
+.benchmark-district-refresh .benchmark-district-space-bars-card { margin-top:13px; padding:16px; min-width:0; }
+.benchmark-district-refresh .benchmark-district-space-bars-card .benchmark-district-bars {
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 24px;
+  max-height:none; overflow:visible;
+}
+@media(max-width:1120px) {
+  .benchmark-district-refresh .benchmark-district-workspace { grid-template-columns:1fr; }
+  .benchmark-district-refresh .benchmark-district-space-column { height:auto; }
+  .benchmark-district-refresh .benchmark-district-space-column .benchmark-space-items { max-height:460px; }
+}
+@media(max-width:680px) {
+  .benchmark-district-refresh .benchmark-district-main-row,
+  .benchmark-district-refresh .benchmark-district-analytics-row { grid-template-columns:1fr; }
+  .benchmark-district-refresh .benchmark-district-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .benchmark-district-refresh .benchmark-district-space-bars-card .benchmark-district-bars { grid-template-columns:1fr; }
+  .benchmark-district-refresh .benchmark-district-map-card .benchmark-real-map { height:300px; }
+  .benchmark-district-refresh .benchmark-district-category-card .benchmark-donut-layout { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+}
+@media(max-width:390px) {
+  .benchmark-district-refresh .benchmark-district-category-card .benchmark-donut-layout { grid-template-columns:1fr; }
+}

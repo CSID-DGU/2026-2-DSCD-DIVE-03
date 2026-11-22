@@ -1,0 +1,11 @@
+/* Detailed address, limited to the existing rental-space card only. */
+.benchmark-space-details .benchmark-space-address {
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  overflow-wrap:anywhere;
+  line-height:1.5;
+  font-size:10px;
+  color:#827b95;
+}
