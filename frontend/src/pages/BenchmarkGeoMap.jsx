@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import './BenchmarkMapRefresh.css';
 import { getBenchmarkMapPoints } from '../services/benchmark';
 
 // 경계 폴리곤이 아닌 개최/등록 위치를 격자로 집계한 지도입니다.
@@ -102,7 +103,7 @@ export default function BenchmarkGeoMap({ region = '전체', district = '전체'
     requestAnimationFrame(() => map.invalidateSize());
   }, [payload, region, showRegionCenters]);
 
-  return <div className="benchmark-map-shell">
+  return <div className="benchmark-map-shell bm-map-light">
     <div ref={elementRef} className="benchmark-real-map" role="application" aria-label="팝업 개최 위치 및 등록 공간 분포 지도" />
     {loading && <div className="benchmark-map-message">지도 좌표를 불러오는 중...</div>}
     {error && <div className="benchmark-map-message is-error">{error}</div>}

@@ -1,0 +1,16 @@
+/* Original Leaflet markers and all interactions are preserved. */
+/* Lighten ONLY the base map raster tiles: markers and labels remain crisp. */
+.bm-map-light .leaflet-tile-pane img.leaflet-tile {
+  filter: grayscale(65%) saturate(45%) brightness(1.12) contrast(.86);
+}
+.bm-map-light .leaflet-control-zoom {
+  border: 1px solid #e7e5f1;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(55,50,113,.09);
+}
+.bm-map-light .leaflet-control-zoom a {
+  background: #fff;
+  color: #6559d8;
+}
+.bm-map-light .leaflet-control-zoom a:hover { background: #f5f2ff; }
