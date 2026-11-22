@@ -1,6 +1,8 @@
 """ZIP prototype flow: web research, official images, description, NLI Traits."""
 
 import json
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from pathlib import Path
 from threading import Lock
@@ -8,7 +10,7 @@ from urllib.parse import urljoin, urlparse
 
 from ml.brand.images import is_public_host, prepare_image
 from ml.brand.sources import collect_page, official_source
-from ml.brand.duplicates import ImageDuplicates
+from ml.brand.duplicates import ImageDuplicates, asset_key
 from ml.brand.descriptions import build_description
 from ml.brand.errors import BrandInputError, evidence_error
 from ml.recommendation.scoring import brand_space_fit_scores
@@ -18,6 +20,46 @@ _BAD_IMAGES = (
     "icon", "logo", "favicon", "payment", "cart", "delivery", "arrow",
     "sprite", "badge", "tracking", "pixel", "qr", "coupon",
 )
+_IMAGE_WORKERS = 3
+
+
+def _collect_images(candidates, page_url, warnings):
+    images = []
+    duplicates = ImageDuplicates()
+    examined_count = 0
+    urls = deque(
+        url for url in (urljoin(page_url, candidate) for candidate in candidates)
+        if not any(word in url.lower() for word in _BAD_IMAGES)
+    )
+    with ThreadPoolExecutor(max_workers=_IMAGE_WORKERS) as pool:
+        while urls and len(images) < 5:
+            # Start no more downloads than the remaining image slots.
+            batch = []
+            batch_assets = set()
+            limit = min(_IMAGE_WORKERS, 5 - len(images))
+            while urls and len(batch) < limit:
+                url = urls[0]
+                key = asset_key(url)
+                if key in batch_assets:
+                    # Revisit this variant after the earlier candidate is decided.
+                    break
+                urls.popleft()
+                if duplicates.known_asset(url):
+                    continue
+                batch_assets.add(key)
+                batch.append((url, pool.submit(prepare_image, url)))
+
+            # Completion order does not change selection order.
+            for url, future in batch:
+                examined_count += 1
+                try:
+                    prepared, data_uri = future.result()
+                except Exception:
+                    warnings.append(f"이미지 수집 제외: {url}")
+                    continue
+                if duplicates.add(url, prepared, data_uri):
+                    images.append({"url": url, "data_uri": data_uri})
+    return images, duplicates, examined_count
 
 
 class BrandAnalyzer:
@@ -69,28 +111,11 @@ class BrandAnalyzer:
             max_output_tokens=2000,
         )
         scraped, home_text, collection, warnings = collect_page(self.firecrawl, brand_url)
-        images = []
-        duplicates = ImageDuplicates()
-        examined_count = 0
         # Bound candidate download attempts as well as accepted image count.
         candidates = [url for url in ((getattr(scraped, "images", None) or [])) if isinstance(url, str)]
-        for candidate in list(dict.fromkeys(candidates))[:20]:
-            url = urljoin(collection["image_page_url"], candidate)
-            if any(word in url.lower() for word in _BAD_IMAGES):
-                continue
-            if duplicates.known_asset(url):
-                continue
-            examined_count += 1
-            try:
-                prepared, data_uri = prepare_image(url)
-            except Exception:
-                warnings.append(f"이미지 수집 제외: {url}")
-                continue
-            if not duplicates.add(url, prepared, data_uri):
-                continue
-            images.append({"url": url, "data_uri": data_uri})
-            if len(images) == 5:
-                break
+        images, duplicates, examined_count = _collect_images(
+            list(dict.fromkeys(candidates))[:20], collection["image_page_url"], warnings,
+        )
         sources = []
         for item in research.output or []:
             if hasattr(item, "model_dump"):
