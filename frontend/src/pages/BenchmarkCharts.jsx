@@ -64,7 +64,6 @@ export function MonthlyLine({ data = [] }) {
       {values.map((value, index) => <circle key={index} cx={x(index)} cy={y(value)} r={index === peakIndex ? 5 : 3} fill="white" stroke="#785df0" strokeWidth="2"><title>{index + 1}월: {value}건</title></circle>)}
       {values.map((_, index) => <text key={index} x={x(index)} y={height - 11} textAnchor="middle" fontSize="11" fill="#7d8499">{index + 1}월</text>)}
     </svg>
-    <p className="benchmark-chart-footnote">조회 기간의 각 연도별 개최 시작 건수를 월 단위로 합산했습니다.</p>
   </div>;
 }
 
