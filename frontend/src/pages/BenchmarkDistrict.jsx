@@ -33,11 +33,11 @@ export default function BenchmarkDistrict({ region, onBack }) {
   ];
 
   return <div className="benchmark">
-    <header className="benchmark-hero"><div>
+    <header className="benchmark-hero"><div className="benchmark-hero-copy">
       <button type="button" className="benchmark-text-link" onClick={onBack}>← 서울 권역 분석으로 돌아가기</button>
-      <h1>팝업 벤치마크 <span>｜ {region} 권역 행정동 분석</span></h1>
+      <h1>팝업 벤치마크 <span className="benchmark-heading-separator">|</span><span className="benchmark-heading-subtitle">{region} 권역 행정동 분석</span></h1>
       <p>행정동별 팝업 개최 현황을 비교하고 해당 지역의 대관 공간을 살펴보세요.</p>
-    </div><div className="benchmark-hero-art" aria-hidden="true">POP-UP</div></header>
+    </div></header>
     <section className="benchmark-panel benchmark-filter-panel">
       <span className="benchmark-filter-title">권역</span><strong>{region}</strong>
       <label className="benchmark-dong-select">행정동 <select value={dong} disabled={loading || Boolean(error)} onChange={event => setDong(event.target.value)}><option value="전체">전체</option>{(data?.districts || []).map(item => <option key={item.district} value={item.district}>{item.district}</option>)}</select></label>

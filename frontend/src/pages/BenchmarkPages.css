@@ -102,3 +102,133 @@
 .benchmark-map-caption { position:absolute; bottom:39px; left:10px; z-index:600; background:#ffffffec; border-radius:8px; padding:6px 9px; color:#5f567c; font-size:10px; pointer-events:none; }
 .benchmark-map-caveat { margin-top:7px; color:#9990a9; font-size:10px; line-height:1.6; }
 .benchmark-real-map .leaflet-control-attribution { font-size:9px; }
+
+
+/* Design refinement 1 — existing API/data behavior is unchanged */
+.benchmark-page-content { padding-top: 18px; }
+.benchmark { --benchmark-accent: #6756e8; }
+.benchmark-hero { min-height: 0; margin: 0 0 21px; padding: 0 1px; align-items: flex-start; }
+.benchmark-hero-copy { width: 100%; }
+.benchmark-hero h1 { display:flex; align-items:center; flex-wrap:wrap; gap: 10px; margin: 4px 0 9px; font-size: clamp(24px,2.25vw,32px); font-weight: 800; line-height: 1.35; letter-spacing: -1.2px; color:#171c30; }
+.benchmark-hero h1 .benchmark-heading-separator { color: #c5c2d6; font-weight: 400; margin: 0 2px; }
+.benchmark-hero h1 .benchmark-heading-subtitle { font-size: .78em; letter-spacing: -.7px; color:#444761; font-weight: 700; }
+.benchmark-hero-icon { width:36px; height:36px; display:inline-grid; place-items:center; flex-shrink:0; border-radius:11px; background:#eeebff; color:#6855ee; font-size:26px; font-weight:700; letter-spacing:0; line-height:1; }
+.benchmark-hero p { font-size:13px; color:#788298; line-height:1.6; }
+.benchmark-hero-art, .benchmark-hero .benchmark-eyebrow { display:none; }
+.benchmark .benchmark-panel { border-color:#e8e9f6; border-radius:17px; box-shadow:0 5px 22px rgba(41,37,109,.035); }
+.benchmark-filter-panel { padding:13px 18px; gap:13px; margin-bottom:15px; }
+.benchmark-region-controls { gap:7px; }
+.benchmark-chip { padding:8px 14px; background:#fff; font-weight:700; color:#646882; transition:background .15s,color .15s,border-color .15s,box-shadow .15s; }
+.benchmark-chip:hover { background:#f3f0ff; border-color:#cfc7fb; }
+.benchmark-chip.is-active { background:#6856ec; border-color:#6856ec; box-shadow:0 3px 9px rgba(104,86,236,.15); color:#fff; }
+.benchmark-summary .benchmark-title-line { margin-bottom:16px; }
+.benchmark-summary .benchmark-title-line h2 { font-size:23px; font-weight:800; color:#24213e; }
+.benchmark-kpi { position:relative; min-height:122px; background:#fcfbff; border:1px solid #edeaf9; border-radius:14px; padding:16px 14px; }
+.benchmark-kpi span { color:#656b81; font-size:11px; }
+.benchmark-kpi strong { font-size:clamp(20px,2vw,26px); letter-spacing:-.7px; margin:12px 0 5px; color:#302856; }
+.benchmark-kpi small { color:#9598aa; font-size:10px; line-height:1.4; }
+.benchmark-overview-grid { gap:15px; }
+.benchmark-chart-grid { gap:15px; margin-top:15px; }
+.benchmark-chart-grid .benchmark-panel h2 { font-size:15px; font-weight:750; margin-bottom:14px; }
+.benchmark-insight { background:#f0ecff; border:1px solid #e6ddff; border-radius:12px; }
+.benchmark-text-link { margin-bottom:11px; }
+.benchmark-dong-select select { min-height:37px; }
+@media(max-width:650px) { .benchmark-hero h1 { font-size:24px; gap:7px; } .benchmark-hero-icon { width:32px;height:32px;font-size:23px; } .benchmark-heading-subtitle { width:100%; } .benchmark-filter-panel { padding:12px; } .benchmark-kpi { min-height:105px; } }
+
+
+/* Design refinement 2 — light basemap & subdued map markers */
+.benchmark-real-map { height:355px; border:1px solid #ececf7; border-radius:14px; background:#f5f6fb; overflow:hidden; }
+.benchmark-district-grid .benchmark-real-map { height:425px; }
+.benchmark-real-map .leaflet-control-zoom { margin:12px 0 0 12px; border:1px solid #e7e8f2; border-radius:11px; overflow:hidden; box-shadow:0 3px 10px rgba(55,50,113,.09); }
+.benchmark-real-map .leaflet-control-zoom a { width:31px; height:31px; line-height:31px; color:#5e55bd; border-bottom-color:#e8e7f2; background:#fff; }
+.benchmark-real-map .leaflet-control-zoom a:hover { background:#f3f0ff; }
+.benchmark-real-map .leaflet-tooltip { border:1px solid #e6e1fa; border-radius:9px; box-shadow:0 6px 18px rgba(44,37,96,.08); color:#4a466a; font-size:11px; }
+.benchmark-map-caption { bottom:39px; left:12px; max-width:calc(100% - 24px); display:flex; flex-wrap:wrap; align-items:center; gap:6px; border:1px solid #e6e4ef; border-radius:10px; padding:8px 10px; box-shadow:0 3px 12px rgba(30,26,90,.06); color:#66647d; font-weight:650; }
+.benchmark-map-legend-ring { width:9px;height:9px;border:2px solid #7665bb;border-radius:50%;display:inline-block; margin-left:5px; }
+.benchmark-map-notice { background:#ffffffef; border:1px solid #ece8f7; }
+.benchmark-map-caveat { margin-top:8px; }
+
+
+/* Design refinement 3 — compact KPI overview and title; no data logic changes */
+.benchmark-hero h1 { gap: 8px; }
+.benchmark-overview-grid { align-items: start; }
+.benchmark-overview-grid > .benchmark-summary { align-self: start; }
+.benchmark-summary { padding-bottom: 18px; }
+.benchmark-summary .benchmark-title-line { margin-bottom: 12px; }
+.benchmark-summary .benchmark-kpi-grid { gap: 9px; }
+.benchmark-summary .benchmark-kpi-grid > div { min-width: 0; }
+.benchmark-summary .benchmark-kpi { min-height: 100px; height: 100%; padding: 14px 13px; }
+.benchmark-summary .benchmark-kpi strong { margin: 11px 0 0; line-height: 1.2; }
+.benchmark-summary .benchmark-kpi small { display: none; }
+.benchmark-summary .benchmark-chart-footnote { display: none; }
+@media(max-width:980px) { .benchmark-summary { padding-bottom: 16px; } }
+
+/* Benchmark overview layout refinement: visually balance map, KPIs and seasonality.
+   Styles are scoped to the overview to preserve the district dashboard. */
+.benchmark-overview-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  align-items: stretch;
+  gap: 15px;
+}
+.benchmark-overview-side {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  min-width: 0;
+}
+.benchmark-overview-grid > .benchmark-overview-side { align-self: stretch; }
+.benchmark-overview-side > .benchmark-summary { flex: none; }
+.benchmark-overview-side > .benchmark-season-card {
+  flex: 1;
+  min-width: 0;
+  min-height: 245px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.benchmark-season-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+.benchmark-season-heading h2 { margin: 0; }
+.benchmark-season-context { font-size: 11px; color: #918ca7; white-space: nowrap; }
+.benchmark-season-card .benchmark-line-wrap { margin-top: 4px; }
+.benchmark-overview-bottom-charts {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  align-items: start;
+}
+.benchmark-overview-bottom-charts > .benchmark-panel {
+  min-height: 0;
+}
+@media (max-width: 980px) {
+  .benchmark-overview-grid,
+  .benchmark-overview-bottom-charts { grid-template-columns: minmax(0, 1fr); }
+  .benchmark-overview-side > .benchmark-season-card { min-height: 0; }
+}
+@media (max-width: 580px) {
+  .benchmark-season-heading { align-items: flex-start; flex-direction: column; gap: 5px; }
+}
+
+/* Design STEP 5: align bottom edge of both analytics cards */
+.benchmark-overview-bottom-charts { align-items:stretch; }
+.benchmark-overview-bottom-charts > .benchmark-panel {
+  height:100%;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+.benchmark-overview-bottom-charts > .benchmark-panel .benchmark-bars {
+  flex:1;
+  justify-content:space-evenly;
+  gap:18px;
+  padding-bottom:8px;
+}
+.benchmark-overview-bottom-charts > .benchmark-panel .benchmark-population {
+  flex:1;
+}
+@media(max-width:980px) {
+  .benchmark-overview-bottom-charts > .benchmark-panel { height:auto; }
+}
