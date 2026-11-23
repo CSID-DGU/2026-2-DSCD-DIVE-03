@@ -272,3 +272,48 @@ h1, h2, h3, p { margin-top: 0; }
 @media (max-width: 1020px) { .history-direction-options { grid-template-columns: 1fr; } }
 @media (max-width: 690px) { .history-direction-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 480px) { .history-direction-options { grid-template-columns: 1fr; } }
+
+
+
+/* ============================================================
+   Issue #65 - 공통 입력 화면 한글 가독성 개선
+   ============================================================ */
+
+.hero-heading h1,
+.hero-heading p,
+.card-heading h2,
+.card-description,
+.step-item strong,
+.step-item small {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.step-item strong,
+.step-item small {
+  line-height: 1.5;
+}
+
+/* 단계 안내 텍스트의 레이아웃 충돌 방지 */
+.step-item {
+  min-width: 0;
+  padding: 10px 6px;
+}
+
+.step-item > div {
+  min-width: 0;
+}
+
+/* 작은 화면에서는 단계 안내문도 자연스럽게 배치 */
+@media (max-width: 600px) {
+  .step-item {
+    flex-wrap: wrap;
+    text-align: center;
+    gap: 5px;
+  }
+
+  .step-item strong {
+    font-size: 11px;
+  }
+}

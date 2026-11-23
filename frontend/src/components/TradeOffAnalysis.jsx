@@ -175,7 +175,6 @@ export default function TradeOffAnalysis({ baseline, spaceIds, onBack }) {
             <div className="tradeoff-summary"><strong>{mock ? 'Mock 비교 요약' : analysis.summary_source === 'llm' ? 'AI 종합 비교 및 우선순위별 추천' : '정량 분석 기반 비교 요약'}</strong><NarrativeSummary summary={analysis.summary}/>{!mock && analysis.llm_status === 'unavailable' && <small className="tradeoff-explain-status">AI 설명 생성에 실패하여 실제 점수에 기반한 기본 분석을 표시합니다.</small>}</div>
             <div className="tradeoff-consider"><strong>최종 결정 전 확인할 사항</strong><p>{analysis.additional_considerations || '실제 대관 조건과 일정, 브랜드 콘셉트를 함께 검토해 주세요.'}</p></div>
           </section>
-          <details className="tradeoff-json"><summary>개발용 API Request·Response JSON 보기</summary><pre>{JSON.stringify({ request, response: analysis }, null, 2)}</pre></details>
           <div className="tradeoff-bottom"><button type="button" onClick={onBack}>← 비교 후보 다시 선택하기</button><span>선택했던 두 공간은 추천 결과에서 유지돼요.</span></div>
         </>
       )}

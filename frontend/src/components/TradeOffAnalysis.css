@@ -147,3 +147,70 @@
   overflow-wrap: break-word;
   line-break: strict;
 }
+
+
+
+/* ============================================================
+   Issue #65 - Trade-off 한글 텍스트 잘림 개선
+   ============================================================ */
+
+/* 공간명 및 주소 */
+.tradeoff-space-content h2,
+.tradeoff-address,
+.tradeoff-leader-name {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.55;
+}
+
+/* 평가요소 비교 헤더 공간명 */
+.tradeoff-factor-header b {
+  min-width: 0;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.5;
+}
+
+/* 평가요소 이름 및 설명 */
+.tradeoff-factor-middle strong,
+.tradeoff-panel-title h2,
+.tradeoff-panel-title p,
+.tradeoff-argument-head h3 {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.55;
+}
+
+/* LLM 비교 설명 */
+.tradeoff-narrative .tradeoff-summary p,
+.tradeoff-narrative .tradeoff-consider p {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
+  line-height: 1.75;
+}
+
+/* 좁은 화면에서 제목과 평가요소 수 배지 겹침 방지 */
+.tradeoff-panel-title {
+  flex-wrap: wrap;
+}
+
+/* 모바일 비교표 열 너비 조정 */
+@media (max-width: 740px) {
+  .tradeoff-factor-header,
+  .tradeoff-factor-row {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(100px, 0.9fr)
+      minmax(0, 1fr);
+    gap: 7px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}

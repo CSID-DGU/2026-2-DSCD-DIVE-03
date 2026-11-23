@@ -9,3 +9,18 @@
   font-size:10px;
   color:#827b95;
 }
+
+
+/* Issue #65 - 벤치마크 대관 공간 주소 전체 표시 */
+
+.benchmark-space-details .benchmark-space-address {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.5;
+  font-size: 10px;
+  color: #827b95;
+}

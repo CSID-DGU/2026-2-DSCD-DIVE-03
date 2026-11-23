@@ -1711,10 +1711,8 @@ useEffect(() => {
               className="whatif-priorities"
               role="tabpanel"
             >
-              <p className="whatif-input-note">
-                평가요소를 선택하고 ↑↓로 순서를
-                변경하세요. 중요도 차이는 바로 아래
-                순위와의 차이예요.
+              <p className="whatif-input-note whatif-priority-instructions">
+                평가요소를 선택하고 ↑↓로 순서를 변경하세요. 중요도 차이는 바로 아래 순위와의 차이예요.
               </p>
 
               {[
@@ -2249,10 +2247,8 @@ useEffect(() => {
 {/* Hard Filter별 후보 수 변화 */}
 <h3>Hard Filter별 후보 수 변화</h3>
 
-<p className="whatif-subnote">
-  예산·운영 기간·희망 지역 변경에 따른 후보 수 변화를
-  비교합니다. 각 조건을 단독 변경한 결과이므로
-  전체 증감량과 합산값이 다를 수 있습니다.
+<p className="whatif-subnote whatif-hard-filter-note">
+  예산·운영 기간·희망 지역 변경에 따른 후보 수 변화를 비교합니다. 각 조건을 단독 변경한 결과이므로 전체 증감량과 합산값이 다를 수 있습니다.
 </p>
 
 {(() => {
@@ -2392,33 +2388,6 @@ useEffect(() => {
                 }
                 llmLoading={spaceLLMLoading}
               />
-
-
-              <details className="whatif-json">
-              
-                <pre>
-                  {JSON.stringify(
-                    {
-                      ...scenario,
-                      updated_recommendation: {
-                        ...updatedRecommendation,
-                        recommendations:
-                          updatedRecommendation?.recommendations?.slice(
-                            0,
-                            TOP_RANK_COUNT
-                          ),
-                      },
-                      rank_changes:
-                        scenario.rank_changes?.slice(
-                          0,
-                          10
-                        ),
-                    },
-                    null,
-                    2
-                  )}
-                </pre>
-              </details>
             </>
           )}
 

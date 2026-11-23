@@ -42,3 +42,16 @@
 @media(max-width:400px) {
   .benchmark-population-regions { grid-template-columns:1fr; }
 }
+
+
+/* Issue #65 - 인구 분석 한글 범례 잘림 개선 */
+
+.benchmark-population-legend span {
+  min-width: 0;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.5;
+}
