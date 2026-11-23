@@ -97,7 +97,6 @@ h1, h2, h3, p { margin-top: 0; }
 .field-error { color: #d54656; font-size: 11px; line-height: 1.5; display: block; padding-top: 5px; }
 .primary-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 0; border-radius: 12px; background: #6460ed; color: white; font-size: 15px; font-weight: 800; min-height: 54px; box-shadow: 0 5px 12px rgba(91, 88, 222, .11); }
 .primary-button:hover { background: #5651da; }
-.form-note { font-size: 11px; text-align: center; margin: -2px 0 0; color: #99a4b6; }
 .preview-card { padding: 32px; }
 .preview-card h2 { font-size: 23px; margin: 15px 0 8px; }
 .preview-card p { font-size: 13px; color: #7c899d; line-height: 1.7; }

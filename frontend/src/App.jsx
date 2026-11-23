@@ -367,7 +367,6 @@ function ConditionsPage({ filters, setFilters, onNext }) {
       </section>
 
       <button className="primary-button" type="submit">다음 · 추천 기준 설정하기 <Icon name="arrow" size={18} /></button>
-      <p className="form-note">선택지: 최종 CSV 기준 지역 7개 · 카테고리 12개 · 성별·연령 조합 16개 / 현재는 Mock 입력으로 서버 전송 없음</p>
     </form>
   );
 }
