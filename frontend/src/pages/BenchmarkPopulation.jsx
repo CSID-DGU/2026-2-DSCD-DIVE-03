@@ -4,6 +4,7 @@ import './BenchmarkPopulation.css';
 
 const COLORS = ['#7153ea', '#9478f2', '#b39ef8', '#cfc3ff', '#93a9ef', '#b5c7f3', '#d1dafa', '#e6e2fa'];
 const fmt = value => Number(value || 0).toLocaleString('ko-KR');
+const share = (count, total) => total > 0 ? `${(count / total * 100).toFixed(1)}%` : '—';
 
 function PopulationDonut({ summary }) {
   const all = summary?.groups || [];
@@ -19,12 +20,12 @@ function PopulationDonut({ summary }) {
     return `${COLORS[i]} ${start}% ${cumulative / total * 100}%`;
   });
   return <div className="benchmark-population-donut-layout">
-    <div className="benchmark-population-donut" style={{ background: `conic-gradient(${segments.join(',')})` }} role="img" aria-label={`성별 연령대별 생활인구 수 그래프. 대표 인구 ${all[0]?.label} ${fmt(all[0]?.count)}명`}>
-      <div className="benchmark-population-hole"><small>대표 생활인구</small><strong>{all[0]?.label}</strong><span>{fmt(all[0]?.count)}명</span></div>
+    <div className="benchmark-population-donut" style={{ background: `conic-gradient(${segments.join(',')})` }} role="img" aria-label={`성별·연령대별 생활인구 비율 그래프. 대표 집단 ${all[0]?.label} ${share(all[0]?.count, total)}`} >
+      <div className="benchmark-population-hole"><small>대표 생활인구</small><strong>{all[0]?.label}</strong><span>{share(all[0]?.count, total)}</span></div>
     </div>
     <div className="benchmark-population-legend">
       {items.map((item, i) => <div key={item.group} title={`${item.label}: ${fmt(item.count)}명`}>
-        <i style={{ background: COLORS[i] }}/><span>{item.label}</span><strong>{fmt(item.count)}명</strong>
+        <i style={{ background: COLORS[i] }}/><span>{item.label}</span><strong>{share(item.count, total)}</strong>
       </div>)}
     </div>
   </div>;
@@ -48,11 +49,10 @@ export default function BenchmarkPopulation({ region }) {
   if (error) return <div className="benchmark-population-empty" role="alert">{error}<button type="button" onClick={() => { setLoading(true); setRetry(v => v + 1); }}>다시 시도</button></div>;
   return <div className="benchmark-population">
     {region === '전체' ? <div className="benchmark-population-regions">
-      {(data?.regions || []).map(item => <div key={item.region} className="benchmark-population-region">
+      {(data?.regions || []).filter(item => item.region !== '기타').map(item => <div key={item.region} className="benchmark-population-region">
         <span>{item.region}</span><strong>{item.top_group?.label || '자료 없음'}</strong>
-        <small>{item.top_group ? `${fmt(item.top_group.count)}명` : '—'}</small>
+        <small>{item.top_group ? share(item.top_group.count, item.total_count) : '—'}</small>
       </div>)}
     </div> : <PopulationDonut summary={selected} />}
-    <p className="benchmark-population-note">※ 등록 대관 공간이 있는 행정동의 평균 생활인구 추정치를 행정동별 한 번씩 집계한 값입니다. 실제 팝업 방문객 수나 서울 전체 주민 수가 아닙니다. 차트 면적은 인구수에 비례합니다.</p>
   </div>;
 }

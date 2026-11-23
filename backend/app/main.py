@@ -9,7 +9,7 @@ from app.api.benchmark import router as benchmark_router
 from app.api.benchmark_map import router as benchmark_map_router
 from app.api.benchmark_spaces import router as benchmark_spaces_router
 from app.api.benchmark_population import router as benchmark_population_router
-
+from app.api.benchmark_popup_grid import router as benchmark_popup_grid_router
 
 app = FastAPI(
     title="POPCAST API",
@@ -48,3 +48,6 @@ app.include_router(benchmark_spaces_router)
 
 # 벤치마크 인구 통계 API
 app.include_router(benchmark_population_router)
+
+# 벤치마크 팝업 모달
+app.include_router(benchmark_popup_grid_router)

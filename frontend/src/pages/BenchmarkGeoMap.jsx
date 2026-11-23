@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import './BenchmarkMapRefresh.css';
 import { getBenchmarkMapPoints } from '../services/benchmark';
+import BenchmarkPopupHistoryModal from './BenchmarkPopupHistoryModal';
 
 // 경계 폴리곤이 아닌 개최/등록 위치를 격자로 집계한 지도입니다.
 const SEOUL = [37.564, 126.996];
@@ -20,6 +22,7 @@ export default function BenchmarkGeoMap({ region = '전체', district = '전체'
   const [payload, setPayload] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedGrid, setSelectedGrid] = useState(null);
   callbacksRef.current = { onSelectRegion, onSelectDistrict };
 
   useEffect(() => {
@@ -57,6 +60,7 @@ export default function BenchmarkGeoMap({ region = '전체', district = '전체'
     const layer = layerRef.current;
     if (!map || !layer || !payload) return;
     layer.clearLayers();
+    setSelectedGrid(null);
     const bounds = [];
     // 진한 점: 팝업 개최 격자. 외곽 링: 대관 공간이 함께 있는 격자
     for (const point of payload.points || []) {
@@ -72,11 +76,38 @@ export default function BenchmarkGeoMap({ region = '전체', district = '전체'
       });
       marker.bindTooltip(`${point.region} · ${point.district}<br/>팝업 ${popup.toLocaleString()}건 · 대관 공간 ${space.toLocaleString()}개`);
       marker.on('click', () => {
-        if (showRegionCenters) {
-          callbacksRef.current.onSelectRegion?.(point.region);
-        } else if (point.district !== '미상') {
-          callbacksRef.current.onSelectDistrict?.(point.district);
+        // 작은 점은 격자 조회 메뉴, 큰 권역 마커는 기존 권역 선택 기능 유지
+        const container = document.createElement('div');
+        container.className = 'bm-grid-popup';
+        const heading = document.createElement('strong');
+        heading.textContent = `${point.region} · ${point.district}`;
+        const counts = document.createElement('p');
+        counts.textContent = `팝업 ${popup.toLocaleString()}건 · 대관 공간 ${space.toLocaleString()}개`;
+        container.append(heading, counts);
+        if (popup > 0) {
+          const historyButton = document.createElement('button');
+          historyButton.type = 'button';
+          historyButton.className = 'bm-grid-popup-primary';
+          historyButton.textContent = `개최 팝업 목록 보기 (${popup}건)`;
+          historyButton.addEventListener('click', () => {
+            map.closePopup();
+            setSelectedGrid({ region: point.region, district: point.district,
+              latitude: point.latitude, longitude: point.longitude });
+          });
+          container.append(historyButton);
         }
+        if (!showRegionCenters && point.district !== '미상') {
+          const districtButton = document.createElement('button');
+          districtButton.type = 'button';
+          districtButton.className = 'bm-grid-popup-secondary';
+          districtButton.textContent = '이 행정동 선택';
+          districtButton.addEventListener('click', () => {
+            map.closePopup();
+            callbacksRef.current.onSelectDistrict?.(point.district);
+          });
+          container.append(districtButton);
+        }
+        L.popup({ maxWidth: 260, minWidth: 190 }).setLatLng(position).setContent(container).openOn(map);
       });
       marker.addTo(layer);
     }
@@ -102,13 +133,14 @@ export default function BenchmarkGeoMap({ region = '전체', district = '전체'
     requestAnimationFrame(() => map.invalidateSize());
   }, [payload, region, showRegionCenters]);
 
-  return <div className="benchmark-map-shell">
+  return <div className="benchmark-map-shell bm-map-light">
     <div ref={elementRef} className="benchmark-real-map" role="application" aria-label="팝업 개최 위치 및 등록 공간 분포 지도" />
     {loading && <div className="benchmark-map-message">지도 좌표를 불러오는 중...</div>}
     {error && <div className="benchmark-map-message is-error">{error}</div>}
     {!loading && !error && payload?.truncated &&
       <div className="benchmark-map-notice">지도 표시를 위해 밀집도 상위 1,500개 격자를 표시합니다.</div>}
-    <div className="benchmark-map-caption">● 개최 위치 격자 · ◯ 등록 공간 포함 · 점을 클릭하여 지역 선택</div>
-    <div className="benchmark-map-caveat">개별 공간의 개최 이력 또는 행정동 경계선이 아닌 위치 분포도입니다.</div>
+    <div className="benchmark-map-caption">● 개최 위치 격자 · ◯ 등록 공간 포함 · 작은 점을 클릭하면 과거 팝업 이력을 볼 수 있습니다.</div>
+    <div className="benchmark-map-caveat">점 하나는 약 100m 격자입니다. 목록은 해당 격자에 포함된 팝업의 개최 이력입니다.</div>
+    <BenchmarkPopupHistoryModal point={selectedGrid} onClose={() => setSelectedGrid(null)} />
   </div>;
 }

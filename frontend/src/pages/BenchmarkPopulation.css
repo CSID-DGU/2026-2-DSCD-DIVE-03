@@ -19,3 +19,26 @@
 .benchmark-population-legend strong { flex:none; color:#564b81; font-size:10px; }
 .benchmark-population-note { margin:13px 0 0; line-height:1.55; font-size:10px !important; color:#928ba3 !important; }
 @media(max-width:600px) { .benchmark-population-donut-layout { grid-template-columns:1fr; } .benchmark-population-donut { max-width:180px; } }
+
+/* Design STEP 5: six regional summary cards, equal-height chart panels. */
+.benchmark-population-regions {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.benchmark-population-region {
+  min-height:106px;
+  padding:13px 12px;
+  justify-content:center;
+  gap:7px;
+}
+.benchmark-population-region span { font-size:11px; }
+.benchmark-population-region strong { font-size:14px; line-height:1.4; }
+.benchmark-population-region small { font-size:15px; font-weight:800; color:#6c51dc; }
+.benchmark-population-note { display:none; }
+@media(max-width:760px) {
+  .benchmark-population-regions { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:400px) {
+  .benchmark-population-regions { grid-template-columns:1fr; }
+}

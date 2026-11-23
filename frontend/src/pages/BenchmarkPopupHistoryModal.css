@@ -1,0 +1,37 @@
+.bm-ph-backdrop { position:fixed; inset:0; z-index:11000; display:flex; align-items:center; justify-content:center; padding:22px; background:rgba(23,22,45,.48); backdrop-filter:blur(3px); }
+.bm-ph-dialog { width:min(620px,100%); max-height:min(790px,90vh); display:flex; flex-direction:column; overflow:hidden; background:#fff; border:1px solid #e9e6f7; border-radius:20px; box-shadow:0 24px 75px rgba(26,20,66,.23); color:#24233a; }
+.bm-ph-header { display:flex; justify-content:space-between; align-items:flex-start; padding:25px 28px 19px; gap:14px; }
+.bm-ph-eyebrow { display:block; color:#8a7dbd; font-size:10px; letter-spacing:1.6px; font-weight:700; margin-bottom:7px; }
+.bm-ph-header h2 { font-size:22px; font-weight:750; margin:0 0 8px; }
+.bm-ph-header p { color:#858398; font-size:12px; margin:0; }
+.bm-ph-close { width:34px; height:34px; flex-shrink:0; border:1px solid #eeeaf6; border-radius:10px; background:#fff; color:#76718d; font-size:25px; line-height:1; cursor:pointer; }
+.bm-ph-close:hover { background:#f6f3ff; }
+.bm-ph-summary { display:flex; justify-content:space-between; padding:12px 28px; background:#f8f7fc; color:#6355ad; font-size:13px; font-weight:700; }
+.bm-ph-summary span { font-size:12px; font-weight:500; color:#9691a4; }
+.bm-ph-scroll { overflow-y:auto; min-height:110px; padding:0 28px; }
+.bm-ph-item { display:flex; gap:15px; padding:19px 0; border-bottom:1px solid #f0edf7; }
+.bm-ph-item:last-child { border-bottom:0; }
+.bm-ph-item-icon { width:50px; height:50px; flex:0 0 50px; display:flex; align-items:center; justify-content:center; font-size:28px; color:#8b74e5; border-radius:12px; background:#f4f0ff; }
+.bm-ph-item-body { min-width:0; flex:1; }
+.bm-ph-item h3 { font-size:14px; line-height:1.5; margin:0 0 8px; font-weight:700; overflow-wrap:anywhere; }
+.bm-ph-item-meta { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:#7d798e; }
+.bm-ph-category { color:#725cc7; background:#f2eeff; padding:3px 8px; border-radius:6px; }
+.bm-ph-address { color:#8c8898; font-size:12px; margin-top:8px; line-height:1.5; overflow-wrap:anywhere; }
+.bm-ph-source { display:inline-block; color:#7456de; font-size:12px; font-weight:650; margin-top:9px; text-decoration:none; }
+.bm-ph-source:hover { text-decoration:underline; }
+.bm-ph-footer { display:flex; justify-content:center; gap:15px; align-items:center; border-top:1px solid #eeeaf4; padding:14px; font-size:13px; }
+.bm-ph-footer button { border:1px solid #e2dcf3; border-radius:8px; background:#fff; color:#6553bb; padding:7px 15px; cursor:pointer; }
+.bm-ph-footer button:disabled { opacity:.35; cursor:not-allowed; }
+.bm-ph-empty { text-align:center; color:#8b879a; padding:48px 10px; font-size:13px; }
+.bm-ph-error { color:#bd5470; }
+.bm-ph-error button { display:block; margin:10px auto; font-size:12px; }
+@media (max-width:600px) { .bm-ph-dialog { max-height:90vh; } .bm-ph-header { padding:18px; } .bm-ph-summary { padding:11px 18px; } .bm-ph-scroll { padding:0 18px; } }
+
+/* 기존 Leaflet 지도 안의 클릭 안내 팝업 */
+.bm-map-light .bm-grid-popup { min-width:190px; display:flex; flex-direction:column; gap:8px; font-family:inherit; }
+.bm-map-light .bm-grid-popup strong { font-size:13px; color:#30274e; }
+.bm-map-light .bm-grid-popup p { font-size:12px; margin:0 0 3px; color:#77718d; }
+.bm-map-light .bm-grid-popup button { cursor:pointer; font-weight:650; font-size:12px; border-radius:7px; padding:9px; }
+.bm-map-light .bm-grid-popup-primary { background:#7559e7; border:1px solid #7559e7; color:white; }
+.bm-map-light .bm-grid-popup-primary:hover { background:#6347d0; }
+.bm-map-light .bm-grid-popup-secondary { background:white; border:1px solid #e2dcf2; color:#6652ba; }

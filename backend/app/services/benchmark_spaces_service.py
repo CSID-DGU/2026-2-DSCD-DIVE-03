@@ -53,9 +53,8 @@ def build_space_list(region, district='전체', min_area=None, max_area=None,
     for col in ('region_group', 'ADSTRD_NM'):
         frame[col] = frame[col].astype('string').str.strip()
     frame = frame.loc[frame.region_group.eq(region)].copy()
-    known_districts = sorted(frame.ADSTRD_NM.dropna().unique().tolist())
-    if district != '전체' and district not in known_districts:
-        raise ValueError('선택한 권역에 속하지 않는 행정동입니다.')
+    # 팝업 개최 이력에는 있지만 등록 대관 공간이 없는 행정동도 정상 조회 대상입니다.
+    # 공간 목록에 없다는 이유로 422 오류를 반환하지 않습니다.
     if district != '전체':
         frame = frame.loc[frame.ADSTRD_NM.eq(district)].copy()
     frame['_area'] = _numeric(frame['area_pyeong']) if 'area_pyeong' in frame else float('nan')
@@ -80,7 +79,8 @@ def build_space_list(region, district='전체', min_area=None, max_area=None,
             'space_id': str(row['seq']),
             'name': str(row['name']) if pd.notna(row['name']) else '이름 미상',
             'district': str(row['ADSTRD_NM']) if pd.notna(row['ADSTRD_NM']) else None,
-            'address': str(row['address']) if 'address' in row and pd.notna(row['address']) else None,
+            'address': str(row['address']).strip() if 'address' in row and pd.notna(row['address']) else None,
+            'address_detail': str(row['addressDetail']).strip() if 'addressDetail' in row and pd.notna(row['addressDetail']) else None,
             'area_pyeong': round(float(area), 1) if pd.notna(area) and area > 0 else None,
             'listed_price_krw': int(round(float(price))) if pd.notna(price) and price > 0 else None,
             'thumbnail_url': _first_photo(row.get('photos')),
