@@ -159,6 +159,9 @@ function SpaceDetail({ space, weights, selected, onCompare, compared, compareDis
         <div><small>면적</small><strong>{decimal(space.area_pyeong)}평</strong></div>
         <div><small>등록 가격</small><strong>{money(space.price_krw)}</strong></div>
         <div><small>인근 역</small><strong>{space.nearest_station || '정보 없음'}</strong></div>
+        {(space.availability_status === 'assumed_available' || space.availability_status === 'api_slots_available') && (
+          <div><small>가용기간</small><strong>OK</strong></div>
+        )}
       </div>
       <div className="result-detail-score">
         <ScoreCircle score={space.final_score}/>
