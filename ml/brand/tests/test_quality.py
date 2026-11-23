@@ -1,10 +1,11 @@
 """Regression checks for duplicate assets and excluded description content."""
 import json
 import unittest
+from threading import Barrier, Event
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 from PIL import Image, ImageDraw
-from ml.brand.analyzer import BrandAnalyzer
+from ml.brand.analyzer import BrandAnalyzer, _collect_images
 
 
 KEYS = ['spirited','trustworthy','upscale','stylish','well-organized','friendly','sentimental']
@@ -26,6 +27,49 @@ def setup_case(urls, descriptions, text='차분한 색감의 공식 브랜드 �
     client = Mock(); client.scrape.return_value = SimpleNamespace(markdown=text, images=urls, metadata={})
     scorer = Mock(); scorer.score.return_value = dict.fromkeys(KEYS, .5)
     return BrandAnalyzer(ai, client, scorer), ai, scorer
+
+
+class ParallelImageSelectionTests(unittest.TestCase):
+    def test_parallel_preparation_preserves_order_and_stops_at_five(self):
+        started = Barrier(3)
+        third_finished = Event()
+        candidates = [f"{i}.jpg" for i in range(1, 8)]
+
+        def prepare(url):
+            name = url.rsplit("/", 1)[-1]
+            if name in candidates[:3]:
+                started.wait(timeout=3)
+            if name == "3.jpg":
+                third_finished.set()
+            if name == "1.jpg" and not third_finished.wait(timeout=3):
+                raise RuntimeError("third image did not finish first")
+            return None, url
+
+        warnings = []
+        with patch("ml.brand.analyzer.prepare_image", side_effect=prepare) as download:
+            images, _, examined = _collect_images(candidates, "https://brand.example/", warnings)
+
+        self.assertEqual([image["url"].rsplit("/", 1)[-1] for image in images], candidates[:5])
+        self.assertEqual(download.call_count, 5)
+        self.assertEqual(examined, 5)
+        self.assertEqual(warnings, [])
+
+    def test_variant_is_used_if_earlier_download_fails_and_skipped_if_accepted(self):
+        variants = [f"https://brand.example/photo.jpg?w={width}" for width in (500, 1000, 1500)]
+        def prepare(url):
+            if url == variants[0]:
+                raise ValueError("first variant unavailable")
+            return None, url
+
+        warnings = []
+        with patch("ml.brand.analyzer.prepare_image", side_effect=prepare) as download:
+            images, duplicates, examined = _collect_images(variants, "https://brand.example/", warnings)
+
+        self.assertEqual([image["url"] for image in images], variants[1:2])
+        self.assertEqual(download.call_count, 2)
+        self.assertEqual(examined, 2)
+        self.assertEqual(duplicates.rejected, [{"url": variants[2], "reason": "same_responsive_asset"}])
+        self.assertEqual(len(warnings), 1)
 
 
 @patch('ml.brand.analyzer.is_public_host', return_value=True)
