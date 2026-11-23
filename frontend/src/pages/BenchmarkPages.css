@@ -232,3 +232,38 @@
 @media(max-width:980px) {
   .benchmark-overview-bottom-charts > .benchmark-panel { height:auto; }
 }
+
+
+/* ============================================================
+   Issue #65 - 벤치마크 한글 텍스트 잘림 개선
+   ============================================================ */
+
+/* 권역별·행정동별 그래프 이름 */
+.benchmark-bar-name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.5;
+}
+
+/* 도넛 차트 범례 */
+.benchmark-donut-legend span {
+  min-width: 0;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.5;
+}
+
+/* 권역별 통계 제목 */
+.benchmark-region-total strong,
+.benchmark-filter-title {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.5;
+}

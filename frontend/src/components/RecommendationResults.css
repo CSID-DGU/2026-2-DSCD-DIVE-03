@@ -306,3 +306,76 @@
 .result-whatif-cta p { margin: 5px 0 0; font-size: 11px; color: #7f86aa; }
 .result-whatif-cta button { border: 0; background: #6761eb; color: white; padding: 11px 15px; border-radius: 9px; font-size: 12px; font-weight: 850; cursor: pointer; white-space: nowrap; }
 @media (max-width: 700px) { .result-whatif-cta { flex-direction: column; align-items: stretch; } .result-whatif-cta button { width: 100%; } .result-top-actions { flex-wrap: wrap; } }
+
+
+/* ============================================================
+   Issue #65 - 추천 결과 한글 텍스트 잘림 개선
+   ============================================================ */
+
+/* 추천 공간 카드 이름 */
+.result-card-name {
+  display: block;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  -webkit-line-clamp: unset;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.55;
+}
+
+/* 추천 공간 카드 주소 */
+.result-card-address {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.55;
+}
+
+/* 비교할 공간 이름 */
+.result-compare-chips > button,
+.result-compare-chips > span {
+  white-space: normal;
+  text-overflow: clip;
+  overflow: visible;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.5;
+}
+
+/* 추천 요약 및 상세 정보 */
+.result-summary-regions,
+.result-detail-name,
+.result-detail-location,
+.result-detail-facts strong,
+.result-filter-tags > span {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.6;
+}
+
+/* 상단 버튼도 좁은 화면에서 줄바꿈 */
+.result-top-actions {
+  flex-wrap: wrap;
+}
+
+.result-top-actions button {
+  white-space: normal;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* 상단 제목과 버튼 영역의 너비 충돌 방지 */
+@media (max-width: 900px) {
+  .result-topline {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .result-top-actions {
+    flex: 1 1 100%;
+  }
+}

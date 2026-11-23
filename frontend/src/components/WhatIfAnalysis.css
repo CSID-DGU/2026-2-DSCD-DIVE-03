@@ -480,30 +480,7 @@
   line-height: 1.5;
 }
 
-.whatif-json {
-  margin-top: 12px;
-  border: 1px solid #e8ecf4;
-  border-radius: 9px;
-  padding: 11px;
-  color: #748196;
-  font-size: 11px;
-}
 
-.whatif-json summary {
-  font-weight: 750;
-  cursor: pointer;
-}
-
-.whatif-json pre {
-  overflow-x: auto;
-  max-height: 280px;
-  overflow-y: auto;
-  background: #f5f7fb;
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 10px;
-  line-height: 1.55;
-}
 
 /* ============================================================
    5. 추천 결과 - 후보 수 변화
@@ -1408,4 +1385,61 @@
   line-height: 1.65;
   word-break: keep-all;
   overflow-wrap: break-word;
+}
+
+
+/* ============================================================
+   Issue #65 - What-if 한글 텍스트 잘림 개선
+   ============================================================ */
+
+/* TOP 5 공간 이름 및 주소 */
+.whatif-space-info > strong,
+.whatif-space-info > small {
+  display: block;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.55;
+}
+
+/* 카드 내부의 텍스트 영역이 줄어들 수 있도록 설정 */
+.whatif-space-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 한글 제목과 상세 분석 설명 */
+.whatif-section-heading h2,
+.whatif-factor-title strong,
+.whatif-selected-heading strong,
+.whatif-insight p,
+.whatif-summary-card p,
+.whatif-change-line strong {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.6;
+}
+
+/* 한글 평가요소 제목과 순위 라벨 */
+.whatif-priority-row > label,
+.whatif-priority-row > label span {
+  min-width: 0;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* Issue #65: What-if 특정 한글 안내 문구가 어절 중간에서 잘리지 않도록 */
+.whatif-priority-instructions,
+.whatif-hard-filter-note {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
+  line-height: 1.75;
 }

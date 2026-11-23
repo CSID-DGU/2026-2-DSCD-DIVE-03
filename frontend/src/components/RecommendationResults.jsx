@@ -295,7 +295,7 @@ export default function RecommendationResults({ filters, softFilters, onEditCond
           <div className="result-empty-icon"><SmallIcon type="pin" size={28}/></div>
           <h2>현재 조건에 맞는 공간이 없어요.</h2>
           <div className="result-empty-actions"><button type="button" className="primary-button" onClick={onEditConditions}>기본 조건 다시 설정하기</button><button type="button" className="result-whatif-start" onClick={() => onOpenWhatIf(result)}>What-if로 조건 완화하기</button></div>
-          <details className="result-request-json"><summary>전송 요청 JSON 확인</summary><pre>{JSON.stringify(request, null, 2)}</pre></details>
+
         </section>
       ) : (
         <>
@@ -320,7 +320,6 @@ export default function RecommendationResults({ filters, softFilters, onEditCond
             <button type="button" className="result-compare-start" disabled={compareIds.length !== 2} onClick={beginTradeOff}>2개 공간 비교하기 <SmallIcon type="arrow" size={15}/></button>
           </section>
           {compareNotice && <p className="result-compare-notice" role="status">{compareNotice}</p>}
-          <details className="result-request-json"><summary>개발용 API 요청·응답 JSON 확인</summary><p>실제 POST /recommendations 응답으로 교체할 수 있도록 동일한 핵심 필드를 사용합니다.</p><pre>{JSON.stringify({ request, response: { ...result, recommendations: result.recommendations.slice(0, 2) } }, null, 2)}</pre></details>
           {modalOpen && <AllSpacesModal spaces={spaces} onClose={() => setModalOpen(false)} onSelect={setSelectedSpaceId} comparedIds={compareIds} onCompare={toggleCompare}/>}
         </>
       )}
