@@ -17,7 +17,8 @@ FACTORS = ['area_fit','subway_accessibility','rental_price_fit','target_ratio','
 def sample_spaces():
     return pd.DataFrame([
         {'seq':str(i),'name':'공간 '+str(i),'price':price,'area_pyeong':area,
-         'station_distance_m':distance,'female_20s_ratio':ratio,
+         'station_distance_m':distance,'female_20s_ratio':1-ratio,
+         'female_20s_avg':round(ratio*10000),'female_30s_avg':500,
          'trait_scores':json.dumps(dict.fromkeys(KEYS, trait)),
          'region_group':'성수','ADSTRD_NM':'동'+str(i),'address':'서울',
          'latitude':37.5,'longitude':127.,'photos':'','availability_status':'assumed_available'}
@@ -39,7 +40,7 @@ class MergedRecommendationTests(unittest.TestCase):
         analyzer=Mock(); analyzer.analyze.return_value={'trait_scores':dict.fromkeys(KEYS,0)}
         payload={'hard_filters':{'max_budget_krw':10000,'start_date':'2026-11-10','end_date':'2026-11-10',
                  'region_ids':['seongsu'],'brand_url':'https://brand.example/',
-                 'area_min_pyeong':40,'area_max_pyeong':60,'target_customers':['female_20s'],'category_id':'beauty'},
+                 'area_min_pyeong':40,'area_max_pyeong':60,'target_customers':['female_20s','female_30s'],'category_id':'beauty'},
                  'soft_filters':{'selected':selected,'importance_gaps':gaps}}
         with patch('app.api.recommendations.load_spaces',return_value=sample_spaces()), \
              patch('app.api.recommendations.filter_spaces_by_period',side_effect=lambda **kw:kw['spaces']), \
@@ -61,6 +62,14 @@ class MergedRecommendationTests(unittest.TestCase):
         for row in body['recommendations']:
             self.assertEqual(set(row['factor_scores']),set(FACTORS))
             self.assertAlmostEqual(sum(row['contributions'].values()),row['final_score'],places=3)
+
+    def test_target_population_prefers_more_people_even_when_share_is_lower(self):
+        response = self.request(['target_ratio'], [])
+        self.assertEqual(response.status_code, 200, response.text)
+        rows = response.json()['recommendations']
+        self.assertEqual([row['space_id'] for row in rows], ['2', '1', '0'])
+        self.assertEqual([row['target_population_avg'] for row in rows], [3500, 2500, 1500])
+        self.assertEqual([row['factor_scores']['target_ratio'] for row in rows], [100, 50, 0])
 
     def test_frontend_importance_gaps_use_nonuniform_csr(self):
         response=self.request(['brand_space_fit','subway_accessibility','rental_price_fit'],[1,2])

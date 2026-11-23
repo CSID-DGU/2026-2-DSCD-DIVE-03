@@ -9,7 +9,8 @@ from ml.recommendation.scoring import (
     area_fit_scores,
     subway_accessibility_scores,
     rental_price_fit_scores,
-    target_ratio_scores,
+    target_population,
+    target_population_scores,
     brand_space_fit_scores,
     popup_history_scores,
 )
@@ -31,7 +32,7 @@ SUPPORTED_FACTORS = {
 
 def calculate_soft_scores(
     candidates, hard_filters, selected, brand_analysis_out=None,
-    popup_history_direction="frequent",
+    popup_history_direction="frequent", *, target_population_out=None,
 ):
     """
     Hard Filter 통과 공간의 Soft Filter 점수를 계산한다.
@@ -100,30 +101,33 @@ def calculate_soft_scores(
         for space_id, score in zip(scores_by_space, scores):
             scores_by_space[space_id]["rental_price_fit"] = score
 
-    # 4. 타깃 고객 비율
+    # 4. 타깃 고객 규모
     if "target_ratio" in selected:
         target_groups = hard_filters.target_customers
 
         if not target_groups:
             raise ValueError(
-                "타깃 고객 비율을 선택하려면 타깃 고객층을 입력해야 합니다."
+                "타깃 고객 규모를 선택하려면 타깃 고객층을 입력해야 합니다."
             )
 
-        ratios_by_candidate = [
-            {
-                group: float(row[f"{group}_ratio"])
-                for group in target_groups
-            }
+        # Preserve the existing API factor key for clients and saved requests.
+        columns = {group: f"{group}_avg" for group in target_groups}
+        missing = [column for column in columns.values() if column not in candidates]
+        if missing:
+            raise ValueError(f"타깃 고객 규모에 필요한 인구 데이터가 없습니다: {', '.join(missing)}")
+
+        totals_by_space = {
+            str(row["seq"]): target_population(
+                {group: float(row[column]) for group, column in columns.items()},
+                target_groups,
+            )
             for _, row in candidates.iterrows()
-        ]
-
-        scores = target_ratio_scores(
-            ratios_by_candidate,
-            target_groups,
-        )
-
-        for space_id, score in zip(scores_by_space, scores):
+        }
+        scores = target_population_scores(list(totals_by_space.values()))
+        for space_id, score in zip(totals_by_space, scores, strict=True):
             scores_by_space[space_id]["target_ratio"] = score
+        if target_population_out is not None:
+            target_population_out.update(totals_by_space)
 
     if "brand_space_fit" in selected:
         if not hard_filters.brand_url:

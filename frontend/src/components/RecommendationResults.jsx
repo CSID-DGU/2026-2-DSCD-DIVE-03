@@ -131,6 +131,9 @@ function FactorBreakdown({ space, weights, selected, popupHistoryDirection = 'fr
           <div className="result-factor-row" key={id}>
             <div className="result-factor-top">
               <strong>{id === 'popup_history' ? `동종 팝업 개최 이력 (${historyDirectionLabel(popupHistoryDirection)})` : (FACTOR_LABELS[id] || id)}</strong>
+              {id === 'target_ratio' && Number.isFinite(space.target_population_avg) && (
+                <span>평균 생활인구 약 {Math.round(space.target_population_avg).toLocaleString('ko-KR')}명</span>
+              )}
               <span><b>{Number(score).toFixed(1)}</b>점</span>
             </div>
             <div className="result-factor-track"><div style={{ width: `${Math.max(0, Math.min(100, Number(score)))}%` }}/></div>

@@ -50,6 +50,7 @@ def run_recommendation(request: RecommendationRequest):
 
     # 4. 사용자가 선택한 Soft Filter만 점수 계산
     brand_analysis = {}
+    target_population_by_space = {}
 
     scores_by_space = calculate_soft_scores(
         candidates,
@@ -57,6 +58,7 @@ def run_recommendation(request: RecommendationRequest):
         soft.selected,
         brand_analysis_out=brand_analysis,
         popup_history_direction=soft.popup_history_direction,
+        target_population_out=target_population_by_space,
     )
 
     # 5. 사용자가 지정한 중요도 순위와 차이로 CSR 가중치 계산
@@ -113,6 +115,8 @@ def run_recommendation(request: RecommendationRequest):
             "availability_status": str(
                 row["availability_status"]
             ),
+
+            "target_population_avg": target_population_by_space.get(space_id),
 
             # B 모델에서 계산한 종합점수
             "final_score": round(

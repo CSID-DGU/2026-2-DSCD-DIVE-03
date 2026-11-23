@@ -2,14 +2,13 @@
 
 from collections.abc import Mapping, Sequence
 from decimal import Decimal
-from math import dist, isfinite, sqrt
+from math import fsum, dist, isfinite, sqrt
 
 
 _TRAIT_KEYS = (
     "spirited", "trustworthy", "upscale", "stylish",
     "well-organized", "friendly", "sentimental",
 )
-_DEMOGRAPHIC_RATIO_SCALE = 1_000_000
 
 
 def _min_max(
@@ -51,23 +50,21 @@ def rental_price_fit_scores(
     return _min_max(budget_ratios, reverse=True)
 
 
-def target_ratio_scores(
-    ratios_by_candidate: Sequence[Mapping[str, float]], selected_groups: Sequence[str]
-) -> list[float]:
-    """Sum selected demographic fractions at CSV precision and normalize."""
+def target_population(counts: Mapping[str, float], selected_groups: Sequence[str]) -> float:
+    """Sum the selected age/sex groups' average living population."""
     if not selected_groups or len(set(selected_groups)) != len(selected_groups):
         raise ValueError("Select at least one demographic group without duplicates.")
+    selected_counts = []
+    for group in selected_groups:
+        count = counts.get(group)
+        if count is None or not isfinite(count) or count < 0:
+            raise ValueError(f"Demographic group {group!r} requires a finite, non-negative count.")
+        selected_counts.append(count)
+    return fsum(selected_counts)
 
-    totals = []
-    for ratios in ratios_by_candidate:
-        selected_ratios = []
-        for group in selected_groups:
-            ratio = ratios.get(group)
-            if ratio is None or not 0 <= ratio <= 1:
-                raise ValueError(f"Demographic group {group!r} requires a fraction in [0, 1].")
-            selected_ratios.append(round(ratio * _DEMOGRAPHIC_RATIO_SCALE))
-        totals.append(sum(selected_ratios))
 
+def target_population_scores(totals: Sequence[float]) -> list[float]:
+    """Normalize absolute population counts across eligible candidates."""
     return _min_max(totals, zero_tie_score=0.0)
 
 

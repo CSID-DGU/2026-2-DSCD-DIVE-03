@@ -4,7 +4,7 @@ import { MOCK_SPACES } from './spaceRecords';
 // 실제 NLI, 팝업 개최 이력 분석, 공간 예약 가능 여부, 공식 CSR 계산을 수행하지 않습니다.
 // 공간 이름·위치·사진·등록 가격은 사용자 제공 최종 공간 CSV를 이용합니다.
 const FACTOR_LABELS = {
-  target_ratio: '타깃 고객 비율',
+  target_ratio: '타깃 고객 규모',
   brand_space_fit: '브랜드–공간 분위기 일치도',
   popup_history: '동종 팝업 개최 이력',
   subway_accessibility: '지하철 접근성',
@@ -43,15 +43,15 @@ export function getDemoWeights(selected = [], gaps = []) {
   return weights;
 }
 
-const targetShare = (space, selectedTargets) => selectedTargets.reduce((total, key) => total + (Number(space.ratios?.[key]) || 0), 0);
+const targetPopulation = (space, selectedTargets) => selectedTargets.reduce((total, key) => total + (Number(space.targetPopulationByGroup?.[key]) || 0), 0);
 
 function demoFactorScore(id, space, filters, targetStats, popupHistoryDirection = 'frequent') {
   const seed = stableHash(`${id}:${space.space_id}:${filters.category_id || ''}:${filters.brand_url || ''}`);
   if (id === 'target_ratio') {
-    const share = targetShare(space, filters.target_customers || []);
+    const population = targetPopulation(space, filters.target_customers || []);
     // 후보군 내 상대 수준을 이용하는 *데모용* 변환입니다. 실제 추천 로직과 다릅니다.
     const range = targetStats.max - targetStats.min;
-    return round(range > 0.00001 ? clamp(45 + 53 * (share - targetStats.min) / range) : 70);
+    return round(range > 0 ? 100 * (population - targetStats.min) / range : population === 0 ? 0 : 50);
   }
   if (id === 'brand_space_fit') return 55 + seed % 43; // NLI 모델 미연결: 재현 가능한 시연 값
   if (id === 'popup_history') { // Mock only: illustrative, NOT actual history counts
@@ -90,14 +90,17 @@ export function getMockRecommendation(request) {
     validRegions.has(space.region_group) && space.price_krw <= budget && space.latitude != null && space.longitude != null,
   );
   // 희망 면적은 Hard Filter가 아니라 area_fit 평가요소에서만 반영합니다.
-  const shares = candidates.map((space) => targetShare(space, filters.target_customers || []));
-  const targetStats = { min: shares.length ? Math.min(...shares) : 0, max: shares.length ? Math.max(...shares) : 0 };
+  const populations = candidates.map((space) => targetPopulation(space, filters.target_customers || []));
+  const targetStats = { min: populations.length ? Math.min(...populations) : 0, max: populations.length ? Math.max(...populations) : 0 };
   const scored = candidates.map((space) => {
     const factor_scores = Object.fromEntries(selected.map((key) => [key, demoFactorScore(key, space, filters, targetStats, soft.popup_history_direction || 'frequent')]));
     const contributions = Object.fromEntries(selected.map((key) => [key, round(factor_scores[key] * weights[key], 3)]));
     const final_score = round(Object.values(contributions).reduce((a, b) => a + b, 0));
     return {
       ...space, rank: 0, final_score, factor_scores, contributions,
+      target_population_avg: selected.includes('target_ratio')
+        ? targetPopulation(space, filters.target_customers || [])
+        : null,
       summary: makeSummary(factor_scores, contributions),
     };
   });

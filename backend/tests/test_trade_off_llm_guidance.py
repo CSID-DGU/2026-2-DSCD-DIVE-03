@@ -40,7 +40,7 @@ def test_named_factors_use_backend_official_labels():
     result = trade_off_llm._facts(fixture())
     rows = result["factors_in_csr_weight_order"]
     assert [row["name"] for row in rows] == [
-        "타깃 고객 비율", "대관료 적합도", "브랜드-공간 분위기 일치도"]
+        "타깃 고객 규모", "대관료 적합도", "브랜드-공간 분위기 일치도"]
     assert [row["csr_weight_percent"] for row in rows] == [45, 30, 25]
     assert result["top_csr_weight_factors"] == [rows[0]]
     # 사용자에게 표시할 평가요소 명칭만 검사
@@ -71,7 +71,7 @@ def test_exact_registered_price_and_score_difference():
 
 def test_similarity_differences_and_top_preference():
     facts = trade_off_llm._facts(fixture())
-    assert [r["name"] for r in facts["similar_factor_scores_within_0_1_points"]] == ["타깃 고객 비율"]
+    assert [r["name"] for r in facts["similar_factor_scores_within_0_1_points"]] == ["타깃 고객 규모"]
     assert [r["name"] for r in facts["main_differentiating_factors_by_weighted_gap"]] == [
         "대관료 적합도", "브랜드-공간 분위기 일치도"]
     assert facts["top_csr_weight_factors"][0]["score_winner"] == "동점"
@@ -83,7 +83,7 @@ def test_equal_top_priority_not_falsely_ranked():
     payload["factor_comparison"][0]["weight"] = .45
     facts = trade_off_llm._facts(payload)
     assert {r["name"] for r in facts["top_csr_weight_factors"]} == {
-        "브랜드-공간 분위기 일치도", "타깃 고객 비율"}
+        "브랜드-공간 분위기 일치도", "타깃 고객 규모"}
 
 
 def test_missing_price_or_common_data_not_invented():
@@ -101,7 +101,7 @@ def test_known_code_names_in_llm_output_are_replaced():
     result = trade_off_llm._replace_factor_codes(sentence)
     assert "대관료 적합도" in result
     assert "브랜드-공간 분위기 일치도" in result
-    assert "타깃 고객 비율" in result
+    assert "타깃 고객 규모" in result
     assert not any(k in result for k in FACTOR_LABELS)
 
 
@@ -134,7 +134,7 @@ def test_openai_fake_request_contains_grounding_and_keeps_scores(monkeypatch):
     assert "target_ratio" not in output["additional_considerations"]
     sent_facts = json.loads(seen["messages"][1]["content"])
     assert sent_facts["registered_price_gap_krw"] == 1_200_000
-    assert sent_facts["top_csr_weight_factors"][0]["name"] == "타깃 고객 비율"
+    assert sent_facts["top_csr_weight_factors"][0]["name"] == "타깃 고객 규모"
     assert "similar_factor_scores_within_0_1_points" in sent_facts
     instructions = seen["messages"][0]["content"]
     assert "공통점과 차이" in instructions

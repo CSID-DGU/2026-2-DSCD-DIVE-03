@@ -392,9 +392,9 @@ function CriterionIcon({ name }) {
 
 const SOFT_FILTER_META = [
   {
-    id: 'target_ratio', label: '타깃 고객 비율', icon: 'people',
-    brief: '원하는 성별·연령대의 방문 비중',
-    detail: '선택한 타깃 성별·연령대 고객이 해당 공간 지역의 방문 인구에서 차지하는 비중이에요.',
+    id: 'target_ratio', label: '타깃 고객 규모', icon: 'people',
+    brief: '선택한 성별·연령대의 평균 생활인구',
+    detail: '공간이 속한 행정동의 평균 생활인구 중 선택한 성별·연령대의 인원수를 합산해요.',
     requires: 'target_customers', requiredLabel: '타깃 고객', autoSelect: true,
   },
   {
