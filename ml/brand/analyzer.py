@@ -2,7 +2,7 @@
 
 import json
 from collections import deque
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from functools import lru_cache
 from pathlib import Path
 from threading import Lock
@@ -31,34 +31,45 @@ def _collect_images(candidates, page_url, warnings):
         url for url in (urljoin(page_url, candidate) for candidate in candidates)
         if not any(word in url.lower() for word in _BAD_IMAGES)
     )
+    pending = deque()
+    pending_assets = set()
+    active = set()
+    failed = set()
     with ThreadPoolExecutor(max_workers=_IMAGE_WORKERS) as pool:
-        while urls and len(images) < 5:
-            # Start no more downloads than the remaining image slots.
-            batch = []
-            batch_assets = set()
+        while urls or pending:
+            # Apply selection and duplicate checks in the original candidate order.
+            while pending and pending[0][2] not in active:
+                url, key, future = pending.popleft()
+                pending_assets.remove(key)
+                examined_count += 1
+                if future in failed:
+                    failed.remove(future)
+                    warnings.append(f"이미지 수집 제외: {url}")
+                    continue
+                prepared, data_uri = future.result()
+                if duplicates.add(url, prepared, data_uri):
+                    images.append({"url": url, "data_uri": data_uri})
+
+            # Only a failed download can free a slot before its turn.
             limit = min(_IMAGE_WORKERS, 5 - len(images))
-            while urls and len(batch) < limit:
+            while urls and len(pending) - len(failed) < limit:
                 url = urls[0]
                 key = asset_key(url)
-                if key in batch_assets:
-                    # Revisit this variant after the earlier candidate is decided.
+                if key in pending_assets:
+                    # Keep a fallback variant until the earlier result is decided.
                     break
                 urls.popleft()
                 if duplicates.known_asset(url):
                     continue
-                batch_assets.add(key)
-                batch.append((url, pool.submit(prepare_image, url)))
+                future = pool.submit(prepare_image, url)
+                pending.append((url, key, future))
+                pending_assets.add(key)
+                active.add(future)
 
-            # Completion order does not change selection order.
-            for url, future in batch:
-                examined_count += 1
-                try:
-                    prepared, data_uri = future.result()
-                except Exception:
-                    warnings.append(f"이미지 수집 제외: {url}")
-                    continue
-                if duplicates.add(url, prepared, data_uri):
-                    images.append({"url": url, "data_uri": data_uri})
+            if not active:
+                break
+            completed, active = wait(active, return_when=FIRST_COMPLETED)
+            failed.update(future for future in completed if future.exception() is not None)
     return images, duplicates, examined_count
 
 

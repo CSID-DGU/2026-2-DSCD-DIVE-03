@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 import pandas as pd
 from curl_cffi import requests
+from curl_cffi.requests.exceptions import HTTPError
 
 
 # ============================================================
@@ -53,6 +54,10 @@ class ScheduleUnsupported(ValueError):
     """플랫폼이 공간 전체의 실시간 일정 미지원을 명시한 경우."""
 
 
+def _is_not_found(exc: Exception) -> bool:
+    return isinstance(exc, HTTPError) and getattr(exc.response, "status_code", None) == 404
+
+
 def get_shareit_schedule_support(space_id: int) -> bool | None:
     """공식 페이지의 지원 플래그. 조회·파싱 실패는 미지원이 아닌 미확인."""
     try:
@@ -77,7 +82,8 @@ def get_shareit_schedule_support(space_id: int) -> bool | None:
                 if isinstance(flag, bool):
                     return flag
     except Exception as exc:
-        print(f"[일정 지원 여부 미확인] {space_id}: {exc}")
+        if not _is_not_found(exc):
+            print(f"[일정 지원 여부 미확인] {space_id}: {exc}")
     return None
 
 
@@ -234,10 +240,12 @@ def check_shareit_period(
             return "assumed_available"
 
         except Exception as exc:
-            print(
-                f"[예약 조회 실패] "
-                f"{space_id}, {target_date}: {exc}"
-            )
+            # 예약 정보가 없는 404는 미확인으로 처리하고 로그를 생략한다.
+            if not _is_not_found(exc):
+                print(
+                    f"[예약 조회 실패] "
+                    f"{space_id}, {target_date}: {exc}"
+                )
 
             # 조회 실패한 날짜는 사용 가능으로 간주
             # 단, 다른 날짜의 sale=False는 계속 검사

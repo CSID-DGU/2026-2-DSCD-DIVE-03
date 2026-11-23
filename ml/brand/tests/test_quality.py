@@ -54,6 +54,32 @@ class ParallelImageSelectionTests(unittest.TestCase):
         self.assertEqual(examined, 5)
         self.assertEqual(warnings, [])
 
+    def test_failed_download_is_replaced_while_earlier_candidate_is_pending(self):
+        replacement_started = Event()
+        earlier_could_continue = Event()
+        candidates = [f"{i}.jpg" for i in range(1, 9)]
+
+        def prepare(url):
+            name = url.rsplit("/", 1)[-1]
+            if name == "1.jpg" and replacement_started.wait(timeout=2):
+                earlier_could_continue.set()
+            if name == "2.jpg":
+                raise ValueError("image unavailable")
+            if name == "4.jpg":
+                replacement_started.set()
+            return None, url
+
+        warnings = []
+        with patch("ml.brand.analyzer.prepare_image", side_effect=prepare) as download:
+            images, _, examined = _collect_images(candidates, "https://brand.example/", warnings)
+
+        self.assertTrue(earlier_could_continue.is_set(), "replacement waited for the earlier image")
+        self.assertEqual([image["url"].rsplit("/", 1)[-1] for image in images],
+                         ["1.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"])
+        self.assertEqual(download.call_count, 6)
+        self.assertEqual(examined, 6)
+        self.assertEqual(warnings, ["이미지 수집 제외: https://brand.example/2.jpg"])
+
     def test_variant_is_used_if_earlier_download_fails_and_skipped_if_accepted(self):
         variants = [f"https://brand.example/photo.jpg?w={width}" for width in (500, 1000, 1500)]
         def prepare(url):

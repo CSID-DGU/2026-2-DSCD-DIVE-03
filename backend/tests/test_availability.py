@@ -2,10 +2,13 @@ import json
 import threading
 import time
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import Mock, patch
 
 import pandas as pd
+from curl_cffi.requests.exceptions import HTTPError
 
 from app.services import availability as a
 
@@ -109,6 +112,32 @@ class AvailabilityTests(unittest.TestCase):
         with patch.object(a, "_get_session", return_value=session), patch.object(a.time, "sleep"):
             self.assertEqual(a.check_shareit_period(1, "2026-11-19", "2026-11-25"), "assumed_available")
         self.assertEqual(session.get.call_count, 7)
+
+    def test_only_http_404_is_silent_in_both_lookup_paths(self):
+        for status in (404, 503):
+            with self.subTest(status=status):
+                response = Mock(status_code=status)
+                response.raise_for_status.side_effect = HTTPError(
+                    f"HTTP {status}", response=response,
+                )
+                session = Mock()
+                session.get.return_value = response
+                output = StringIO()
+                with patch.object(a, "_get_session", return_value=session), redirect_stdout(output):
+                    self.assertIsNone(a.get_shareit_schedule_support(1))
+                    self.assertEqual(
+                        a.check_shareit_period(1, "2026-11-19", "2026-11-19"),
+                        "assumed_available",
+                    )
+
+                self.assertEqual(session.get.call_count, 2)
+                if status == 404:
+                    self.assertEqual(output.getvalue(), "")
+                else:
+                    self.assertEqual(output.getvalue().splitlines(), [
+                        "[일정 지원 여부 미확인] 1: HTTP 503",
+                        "[예약 조회 실패] 1, 2026-11-19: HTTP 503",
+                    ])
 
     def test_http_sessions_are_isolated_between_workers(self):
         gate = threading.Barrier(4)
